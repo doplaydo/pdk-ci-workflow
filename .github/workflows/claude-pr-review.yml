@@ -1,10 +1,10 @@
 name: Claude PR Review
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-  issue_comment:
-    types: [created]
+  workflow_call:
+    secrets:
+      ANTHROPIC_API_KEY:
+        required: true
 
 permissions:
   contents: read

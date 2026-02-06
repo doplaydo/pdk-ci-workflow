@@ -1,10 +1,10 @@
 name: Test code
 
 on:
-  pull_request:
-  push:
-    branches:
-      - main
+  workflow_call:
+    secrets:
+      GFP_API_KEY:
+        required: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
