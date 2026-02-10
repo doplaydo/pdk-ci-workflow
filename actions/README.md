@@ -1,0 +1,3 @@
+# Composite Actions
+
+Composite actions are bundles of steps packaged up with an action.yml file that can live in any directory. They're used within a job, at the step level, and they execute on whatever runner the calling job is already using. The calling repo retains full control over the job definition — the runner, permissions, other steps before and after — and just drops the composite action in as a convenience. This is ideal when you want to share common step sequences (like setting up a toolchain or sending a notification) but leave teams free to structure their own jobs around them.
