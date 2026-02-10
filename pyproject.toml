@@ -1,0 +1,22 @@
+[project]
+name = "ci-pdk-workflows"
+version = "0.1.0"
+description = "Centralised pre-commit hooks and CI standards"
+requires-python = ">=3.9"
+
+# Any dependencies your hook scripts need
+dependencies = []
+
+[project.scripts]
+check_requires_pytz = "hooks.check_requires_pytz:check_pyproject"
+# add more as you create them, e.g.:
+# check_required_files = "hooks.check_required_files:main"
+# check_field_formats = "hooks.check_field_formats:main"
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["hooks*"]
