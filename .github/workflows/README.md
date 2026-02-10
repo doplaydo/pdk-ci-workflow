@@ -1,0 +1,3 @@
+# Reusable workflows
+
+Reusable worflows are complete, self-contained workflow definitions that live in `.github/workflows/` and are triggered via `workflow_call`. When another repo calls a reusable workflow, it's delegating an entire job - the reusable workflow controls everything: which runner it uses, what permissions it has, what steps run, and how secrets are handled. The calling repo just says "run this job for me" and optionally passes in some inputs. This is ideal when you want to enforce a standardised process across your org where individual teams shouldn't be tweaking the internals.

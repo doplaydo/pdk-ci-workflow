@@ -1,0 +1,10 @@
+- id: requires-pytz
+  name: Ensure pytz in pyproject.toml
+  entry: check_requires_pytz
+  language: python
+  always_run: true
+  pass_filenames: false
+  description: >
+    Ensures pytz is listed in [project.dependencies]. If missing, it
+    auto-injects it and fails the commit so the developer can review and
+    re-commit.
