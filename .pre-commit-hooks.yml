@@ -1,10 +1,141 @@
-- id: requires-pytz
-  name: Ensure pytz in pyproject.toml
-  entry: check_requires_pytz
+- id: check-required-files
+  name: Check required PDK files exist
+  entry: check_required_files
   language: python
   always_run: true
   pass_filenames: false
   description: >
-    Ensures pytz is listed in [project.dependencies]. If missing, it
-    auto-injects it and fails the commit so the developer can review and
-    re-commit.
+    Verifies required files (README.md, LICENSE, Makefile, pyproject.toml,
+    .pre-commit-config.yaml, tests/, workflows) exist at repo root.
+
+- id: check-pyproject-sections
+  name: Validate pyproject.toml sections
+  entry: check_pyproject_sections
+  language: python
+  always_run: true
+  pass_filenames: false
+  description: >
+    Deep validation of pyproject.toml for all required PDK configuration
+    sections: build-system, project fields, ruff, codespell, pytest, tbump,
+    mypy, towncrier, and package-data.
+
+- id: check-package-init
+  name: Validate PDK package __init__.py
+  entry: check_package_init
+  language: python
+  always_run: true
+  pass_filenames: false
+  description: >
+    Checks that the top-level package __init__.py defines __version__ as a
+    string literal and __all__ for public API exports.
+
+- id: check-cells-structure
+  name: Validate PDK cell functions
+  entry: check_cells_structure
+  language: python
+  always_run: true
+  pass_filenames: false
+  description: >
+    Checks @gf.cell decorators on component functions, Google-style
+    docstrings with Args sections, and cells/__init__.py re-exports.
+
+- id: check-tech-structure
+  name: Validate PDK tech.py
+  entry: check_tech_structure
+  language: python
+  always_run: true
+  pass_filenames: false
+  description: >
+    Checks that tech.py defines LAYER, LAYER_STACK, LAYER_VIEWS, and
+    cross_sections. Optionally cross-checks with layers.yaml.
+
+- id: check-pdk-object
+  name: Validate Pdk() constructor
+  entry: check_pdk_object
+  language: python
+  always_run: true
+  pass_filenames: false
+  description: >
+    Checks that Pdk() is constructed with required keyword arguments
+    (name, cells, layers, cross_sections) and uses get_cells().
+
+- id: check-test-structure
+  name: Validate test directory structure
+  entry: check_test_structure
+  language: python
+  always_run: true
+  pass_filenames: false
+  description: >
+    Checks tests/ directory exists with test files, GDS reference
+    directories, difftest() calls, and data_regression usage.
+
+- id: check-makefile-targets
+  name: Validate Makefile targets
+  entry: check_makefile_targets
+  language: python
+  always_run: true
+  pass_filenames: false
+  description: >
+    Checks Makefile has required targets (install, test) and recommended
+    targets (docs, build, test-force, update-pre).
+
+- id: check-workflows
+  name: Validate GitHub Actions workflows
+  entry: check_workflows
+  language: python
+  always_run: true
+  pass_filenames: false
+  description: >
+    Checks .github/workflows/ has test_code.yml with pre-commit and
+    test jobs. Recommends release.yml for published PDKs.
+
+- id: check-multi-band
+  name: Validate multi-band PDK consistency
+  entry: check_multi_band
+  language: python
+  always_run: true
+  pass_filenames: false
+  description: >
+    For multi-band PDKs, checks each band has consistent module sets
+    (cells, tech, models), corresponding tests, and shared layers.
+
+- id: check-no-raw-layers
+  name: No raw layer tuples in cells
+  entry: check_no_raw_layers
+  language: python
+  always_run: true
+  pass_filenames: false
+  description: >
+    Flags (int, int) tuples in cell files that should use LAYER.XXX
+    constants instead. Allows raw tuples in tech.py and layers.py.
+
+- id: check-no-main-in-cells
+  name: No __main__ blocks in cells
+  entry: check_no_main_in_cells
+  language: python
+  always_run: true
+  pass_filenames: false
+  description: >
+    Flags if __name__ == "__main__" blocks in cell files. Debug/test
+    code should not be committed in cell modules.
+
+- id: check-precommit-config
+  name: Validate .pre-commit-config.yaml hooks
+  entry: check_precommit_config
+  language: python
+  always_run: true
+  pass_filenames: false
+  description: >
+    Checks .pre-commit-config.yaml includes required hooks
+    (end-of-file-fixer, trailing-whitespace, ruff, ruff-format) and
+    recommended hooks (nbstripout, codespell).
+
+- id: check-version-sync
+  name: Verify version consistency
+  entry: check_version_sync
+  language: python
+  always_run: true
+  pass_filenames: false
+  description: >
+    Checks version strings match across pyproject.toml [project].version,
+    [tool.tbump.version].current, __init__.py __version__, and README.md.

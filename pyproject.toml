@@ -4,18 +4,31 @@ version = "0.1.0"
 description = "Centralised pre-commit hooks and CI standards"
 requires-python = ">=3.9"
 
-# Any dependencies your hook scripts need
-dependencies = []
+dependencies = [
+    "tomli>=1.1.0; python_version < '3.11'",
+    "pyyaml>=6.0",
+]
 
 [project.scripts]
 check_requires_pytz = "hooks.check_requires_pytz:check_pyproject"
-# add more as you create them, e.g.:
-# check_required_files = "hooks.check_required_files:main"
-# check_field_formats = "hooks.check_field_formats:main"
+check_required_files = "hooks.check_required_files:main"
+check_pyproject_sections = "hooks.check_pyproject_sections:main"
+check_package_init = "hooks.check_package_init:main"
+check_cells_structure = "hooks.check_cells_structure:main"
+check_tech_structure = "hooks.check_tech_structure:main"
+check_pdk_object = "hooks.check_pdk_object:main"
+check_test_structure = "hooks.check_test_structure:main"
+check_makefile_targets = "hooks.check_makefile_targets:main"
+check_workflows = "hooks.check_workflows:main"
+check_multi_band = "hooks.check_multi_band:main"
+check_no_raw_layers = "hooks.check_no_raw_layers:main"
+check_no_main_in_cells = "hooks.check_no_main_in_cells:main"
+check_precommit_config = "hooks.check_precommit_config:main"
+check_version_sync = "hooks.check_version_sync:main"
 
 [build-system]
 requires = ["setuptools>=68.0"]
-build-backend = "setuptools.backends._legacy:_Backend"
+build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["."]

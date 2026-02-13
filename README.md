@@ -12,15 +12,17 @@ This repository provides reusable automation tooling for Process Design Kit (PDK
 - Standardized testing, linting, and type checking across all PDKs
 - Automated documentation builds and deployments
 - AI-powered code reviews via Claude
-- Pre-commit hooks for local development compliance
+- 15 pre-commit hooks enforcing PDK structural compliance
 - Semantic versioning and automated release notes
+- Automated template sync across all managed PDK repos
 
 ## Features
 
-This repository provides three complementary automation patterns:
+This repository provides four complementary automation patterns:
 
 - **Reusable GitHub Actions Workflows** - Complete CI/CD jobs for testing, docs, releases, and code review
-- **Pre-commit Hooks** - Local development checks that enforce organizational standards
+- **Pre-commit Hooks** - 15 local development checks enforcing PDK organizational standards
+- **Template Sync System** - Automated compliance enforcement across all managed PDK repos
 - **Composite Actions** - Shared step sequences for flexible workflow composition (in development)
 
 Additional capabilities:
@@ -58,9 +60,17 @@ Pre-commit hooks run locally on developer machines before commits are created. T
 
 ### For consuming PDK repositories:
 
-**1. Add reusable workflows:**
+The easiest way to onboard is to use the template files provided in `templates/`. These are automatically synced to managed PDK repos via the push-compliance workflow, but you can also copy them manually.
+
+**1. Add reusable workflows** (copy from `templates/.github/workflows/`):
 ```yaml
 # .github/workflows/test_code.yml
+name: Test code
+on:
+  pull_request:
+  push:
+    branches: [main]
+
 jobs:
   test:
     uses: doplaydo/pdk-ci-workflow/.github/workflows/test_code.yml@v1
@@ -68,14 +78,28 @@ jobs:
       GFP_API_KEY: ${{ secrets.GFP_API_KEY }}
 ```
 
-**2. Add pre-commit hooks:**
+**2. Add pre-commit hooks** (copy from `templates/.pre-commit-config.yaml`):
 ```yaml
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/doplaydo/pdk-ci-workflow
-    rev: v1
+    rev: v1  # Use specific version tag
     hooks:
       - id: requires-pytz
+      - id: check-required-files
+      - id: check-pyproject-sections
+      - id: check-package-init
+      - id: check-cells-structure
+      - id: check-tech-structure
+      - id: check-pdk-object
+      - id: check-test-structure
+      - id: check-makefile-targets
+      - id: check-workflows
+      - id: check-multi-band
+      - id: check-no-raw-layers
+      - id: check-no-main-in-cells
+      - id: check-precommit-config
+      - id: check-version-sync
 ```
 
 **3. Install pre-commit:**
@@ -200,11 +224,13 @@ jobs:
 
 ## Pre-commit Hooks
 
-Pre-commit hooks run locally before commits to enforce code standards. Install them in your PDK repository to catch issues early.
+Pre-commit hooks run locally before commits to enforce PDK structural standards. All hooks are repo-level checks (`always_run: true`, `pass_filenames: false`) that use errors for required items and warnings for recommended items.
+
+See [`hooks/README.md`](hooks/README.md) for detailed documentation of each hook.
 
 ### Installation
 
-Add to your `.pre-commit-config.yaml`:
+Add to your `.pre-commit-config.yaml` (or use the template from `templates/.pre-commit-config.yaml`):
 
 ```yaml
 repos:
@@ -212,6 +238,9 @@ repos:
     rev: v1  # Use specific version tag
     hooks:
       - id: requires-pytz
+      - id: check-required-files
+      - id: check-pyproject-sections
+      # ... add hooks as needed
 ```
 
 Then install:
@@ -222,29 +251,95 @@ pre-commit install
 
 ### Available Hooks
 
-#### `requires-pytz`
-Ensures `pytz` is listed in `[project.dependencies]` of `pyproject.toml`.
+#### Project Structure
 
-**Behavior:**
-- Scans `pyproject.toml` for `pytz` in dependencies
-- If missing, auto-injects it with proper formatting
-- Fails the commit so you can review the change
-- Re-commit to proceed
+| Hook ID | What it checks |
+|---------|---------------|
+| `check-required-files` | README.md, LICENSE, Makefile, pyproject.toml, .pre-commit-config.yaml, tests/, workflows exist |
+| `check-pyproject-sections` | Deep validation of pyproject.toml: build-system, project fields, ruff, codespell, pytest, tbump, mypy, towncrier, package-data (11 sub-checks) |
+| `check-package-init` | `__version__` defined as string literal, `__all__` defined in package `__init__.py` |
+| `check-version-sync` | Version consistency across pyproject.toml, tbump config, `__init__.py`, and README.md |
 
-**Configuration:**
+#### Cells & Technology
+
+| Hook ID | What it checks |
+|---------|---------------|
+| `check-cells-structure` | `@gf.cell` decorators on component functions, Google-style docstrings with Args, `cells/__init__.py` re-exports |
+| `check-tech-structure` | `tech.py` defines LAYER, LAYER_STACK, LAYER_VIEWS, cross_sections; optional layers.yaml cross-check |
+| `check-pdk-object` | `Pdk()` constructor has required kwargs (name, cells, layers, cross_sections), uses `get_cells()` |
+| `check-no-raw-layers` | Flags `(int, int)` tuples in cell files that should use `LAYER.XXX` constants |
+| `check-no-main-in-cells` | Flags `if __name__ == "__main__"` blocks in cell files |
+
+#### Infrastructure
+
+| Hook ID | What it checks |
+|---------|---------------|
+| `check-makefile-targets` | Required targets (install, test) and recommended targets (docs, build, test-force, update-pre) |
+| `check-workflows` | `.github/workflows/` has test_code.yml with pre-commit and test jobs |
+| `check-precommit-config` | `.pre-commit-config.yaml` includes required hooks (trailing-whitespace, end-of-file-fixer, ruff, ruff-format) |
+
+#### Multi-band & Dependencies
+
+| Hook ID | What it checks |
+|---------|---------------|
+| `check-multi-band` | For multi-band PDKs: consistent module sets per band, corresponding tests, shared layers |
+| `requires-pytz` | Ensures `pytz` is in `[project.dependencies]`; auto-injects if missing |
+
+## Template Sync System
+
+This repository includes a template synchronization system that keeps all managed PDK repos up to date with the latest workflows, pre-commit config, and GitHub configuration.
+
+### How It Works
+
+1. **Templates** (`templates/`) contain reference configuration files with `{{VERSION}}` placeholders
+2. **PDK Registry** (`pdks.yml`) lists all managed PDK repositories as `org/repo` entries
+3. **Push-compliance workflow** (`.github/workflows/push-compliance.yml`) runs on every push to `main`:
+   - Reads `pdks.yml` to build a dynamic matrix of PDK repos
+   - For each PDK: clones the repo, copies templates (replacing `{{VERSION}}` with the latest tag), runs pre-commit hooks, and opens a PR with any changes
+4. **Local script** (`scripts/push_compliance.py`) provides the same functionality for local testing
+
+### Template Files
+
+| Template | Purpose |
+|----------|---------|
+| `.pre-commit-config.yaml` | Pre-commit hook config with all 15 PDK compliance hooks |
+| `.github/workflows/test_code.yml` | Thin wrapper calling reusable test workflow |
+| `.github/workflows/pages.yml` | Thin wrapper calling reusable docs workflow |
+| `.github/workflows/claude-pr-review.yml` | Thin wrapper for AI code review |
+| `.github/workflows/release-drafter.yml` | Thin wrapper for release management |
+| `.github/dependabot.yml` | Monthly pip and github-actions dependency updates |
+| `.github/release-drafter.yml` | Release note template with semantic versioning categories |
+
+### Adding a PDK to Managed Repos
+
+Add the `org/repo` entry to `pdks.yml`:
 ```yaml
-- id: requires-pytz
-  name: Ensure pytz in pyproject.toml
-  always_run: true
+pdks:
+  - doplaydo/pdk-ci-demo
+  - gdsfactory/cspdk       # add new PDK here
 ```
 
-**Example output:**
+The next push to `main` will automatically open a compliance PR on the new repo.
+
+### Local Sync
+
+Use `scripts/push_compliance.py` for testing or manual sync:
+
+```bash
+# Preview changes without modifying anything
+python scripts/push_compliance.py --dry-run
+
+# Sync a single PDK
+python scripts/push_compliance.py --pdk doplaydo/pdk-ci-demo
+
+# Sync with a specific version tag
+python scripts/push_compliance.py --version v0.2.0
+
+# Sync templates and run pre-commit, but don't create PRs
+python scripts/push_compliance.py --no-pr
 ```
-❌ pytz not found in [project.dependencies]!
-   🔧 Auto-adding pytz to [project.dependencies]...
-   ✅ Added: "pytz",
-   Staged file has been modified — please review and re-commit.
-```
+
+See [`scripts/README.md`](scripts/README.md) for full documentation.
 
 ## Composite Actions
 
@@ -268,7 +363,7 @@ Some configuration files **cannot** be referenced remotely via GitHub Actions an
 - `.github/release-drafter.yml` - Release note templates
 - `Makefile` - Build targets (`install`, `test`, `docs`)
 
-These files are provided by the PDK template repository and should be copied when creating a new PDK. Note that GitHub templates are a one-time copy — changes to the template do not propagate to existing repos automatically.
+These files are provided as templates in `templates/` and are automatically synced to managed PDK repos via the push-compliance workflow. For non-managed repos, copy them manually from the templates directory.
 
 ## Requirements
 
@@ -280,9 +375,14 @@ PDK repositories consuming these workflows need:
 - **Makefile:** Must define `install`, `test`, and `docs` targets
 
 ### GitHub Secrets
-Depending on which workflows you use:
+
+For PDK repositories:
 - `GFP_API_KEY` - For GDSFactory Platform validation (`test_code.yml`)
 - `ANTHROPIC_API_KEY` - For Claude code reviews (`claude-pr-review.yml`)
+
+For this repository (push-compliance):
+- `GH_APP_ID` - GitHub App ID for cross-repo PRs
+- `GH_APP_PRIVATE_KEY` - GitHub App private key for cross-repo PRs
 
 ### GitHub Pages (for documentation)
 Enable GitHub Pages in your repository settings:
@@ -295,16 +395,31 @@ Enable GitHub Pages in your repository settings:
 
 1. Create workflow file in `.github/workflows/`
 2. Use `workflow_call` trigger with defined inputs/secrets
-3. Document in this README under "Reusable Workflows"
-4. Test in a PDK repository before tagging a release
+3. Add a corresponding thin wrapper template in `templates/.github/workflows/`
+4. Document in this README under "Reusable Workflows"
+5. Test in a PDK repository before tagging a release
 
 ### Adding a New Pre-commit Hook
 
 1. Create Python script in `hooks/` directory
 2. Add entry point to `pyproject.toml` under `[project.scripts]`
 3. Register hook in `.pre-commit-hooks.yml` with unique ID
-4. Document in this README under "Pre-commit Hooks"
-5. Test locally: `pre-commit try-repo . <hook-id> --verbose --all-files`
+4. Add the hook to `templates/.pre-commit-config.yaml`
+5. Document in `hooks/README.md`
+6. Test locally: `pre-commit try-repo . <hook-id> --verbose --all-files`
+
+### Adding a New Template
+
+1. Create the template file in `templates/` mirroring the target path
+2. Use `{{VERSION}}` placeholder where the pdk-ci-workflow version tag should appear
+3. The push-compliance workflow will automatically sync it to all managed PDKs
+
+### Onboarding a New PDK
+
+1. Add the `org/repo` entry to `pdks.yml`
+2. Ensure the GitHub App has access to the target repository
+3. Run `python scripts/push_compliance.py --dry-run --pdk org/repo` to preview
+4. Push to `main` to trigger automatic compliance PR
 
 ### Versioning
 
@@ -314,6 +429,32 @@ This repository uses semantic versioning:
 - **Patch (v1.0.1):** Bug fixes, documentation updates
 
 Consuming repositories should pin to major version tags (e.g., `@v1`) to receive minor updates and patches automatically while avoiding breaking changes.
+
+## Repository Structure
+
+```
+pdk-ci-workflow/
+├── .github/
+│   ├── workflows/          # Reusable workflows + push-compliance
+│   ├── release-drafter.yml # Release note template config
+│   └── README.md
+├── hooks/                  # Pre-commit hook implementations
+│   ├── _utils.py           # Shared utilities (TOML/YAML, AST, CheckResult)
+│   ├── check_*.py          # Individual hook scripts (15 total)
+│   └── README.md
+├── templates/              # Config templates synced to PDK repos
+│   ├── .pre-commit-config.yaml
+│   ├── .github/
+│   └── README.md
+├── scripts/                # Local CLI utilities
+│   ├── push_compliance.py  # Manual template sync tool
+│   └── README.md
+├── actions/                # Composite actions (in development)
+│   └── README.md
+├── .pre-commit-hooks.yml   # Hook registration for pre-commit framework
+├── pdks.yml                # Registry of managed PDK repositories
+└── pyproject.toml          # Package config and hook entry points
+```
 
 ## Related Projects
 

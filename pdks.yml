@@ -1,0 +1,9 @@
+# PDK repositories managed by pdk-ci-workflow.
+# Each entry is a full org/repo path. The push-compliance workflow
+# iterates over this list to open sync PRs on every commit to main.
+pdks:
+  - doplaydo/pdk-ci-demo
+  # Add real PDK repos here as they're onboarded, e.g.:
+  # - gdsfactory/cspdk
+  # - gdsfactory/ubcpdk
+  # - gdsfactory/gf180
