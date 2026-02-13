@@ -1,0 +1,10 @@
+name: Build docs
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  docs:
+    uses: doplaydo/pdk-ci-workflow/.github/workflows/pages.yml@{{VERSION}}
