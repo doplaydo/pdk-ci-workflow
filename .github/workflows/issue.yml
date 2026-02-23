@@ -1,23 +1,7 @@
 name: Auto-label PDK issues
 
 on:
-  issues:
-    types:
-      - opened
-      - edited
-      - deleted
-      - pinned
-      - unpinned
-      - closed
-      - reopened
-      - assigned
-      - unassigned
-      - unlabeled
-      - locked
-      - unlocked
-      - transferred
-      - milestoned
-      - demilestoned
+  workflow_call:
 
 jobs:
   add-label:

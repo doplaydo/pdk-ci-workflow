@@ -46,33 +46,45 @@ def main() -> int:
         else:
             jobs = data.get("jobs", {})
 
-            # Check for pre-commit job
-            has_precommit_job = False
-            for job_name, job_def in jobs.items():
+            # Check if any job delegates to the centralized test_code workflow.
+            # A thin wrapper job has a top-level `uses:` key instead of `steps:`.
+            uses_centralized = False
+            for _job_name, job_def in jobs.items():
                 if not isinstance(job_def, dict):
                     continue
-                if "pre-commit" in job_name.lower():
-                    has_precommit_job = True
-                    break
-                steps_text = _flatten_steps(job_def)
-                if "pre-commit" in steps_text:
-                    has_precommit_job = True
+                uses = job_def.get("uses", "")
+                if "pdk-ci-workflow" in uses and "test_code" in uses:
+                    uses_centralized = True
                     break
 
-            if not has_precommit_job:
-                result.error(f"{test_wf_path}: no pre-commit job found")
+            if not uses_centralized:
+                # Check for pre-commit job
+                has_precommit_job = False
+                for job_name, job_def in jobs.items():
+                    if not isinstance(job_def, dict):
+                        continue
+                    if "pre-commit" in job_name.lower():
+                        has_precommit_job = True
+                        break
+                    steps_text = _flatten_steps(job_def)
+                    if "pre-commit" in steps_text:
+                        has_precommit_job = True
+                        break
 
-            # 9b. Check for test_code job
-            has_test_job = False
-            for job_name, job_def in jobs.items():
-                if not isinstance(job_def, dict):
-                    continue
-                if "test" in job_name.lower() and "pre" not in job_name.lower():
-                    has_test_job = True
-                    break
+                if not has_precommit_job:
+                    result.error(f"{test_wf_path}: no pre-commit job found")
 
-            if not has_test_job:
-                result.warn(f"{test_wf_path}: no test_code job found")
+                # 9b. Check for test_code job
+                has_test_job = False
+                for job_name, job_def in jobs.items():
+                    if not isinstance(job_def, dict):
+                        continue
+                    if "test" in job_name.lower() and "pre" not in job_name.lower():
+                        has_test_job = True
+                        break
+
+                if not has_test_job:
+                    result.warn(f"{test_wf_path}: no test_code job found")
 
     # 9c. release.yml should exist
     release_path = wf_dir / "release.yml"
