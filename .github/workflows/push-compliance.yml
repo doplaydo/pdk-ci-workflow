@@ -14,7 +14,7 @@ jobs:
     outputs:
       pdks: ${{ steps.read.outputs.pdks }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Read PDK registry
         id: read
@@ -56,7 +56,7 @@ jobs:
           repositories: ${{ steps.parse.outputs.repo }}
 
       - name: Checkout pdk-ci-workflow (for templates)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           path: source
           fetch-depth: 0
