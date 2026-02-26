@@ -1,0 +1,111 @@
+- id: check-required-files
+  name: Check Required Files
+  description: Check that required files exist in the PDK repo
+  entry: check_required_files
+  language: python
+  always_run: true
+  pass_filenames: false
+
+- id: check-pyproject-sections
+  name: Check Pyproject Sections
+  description: Check that pyproject.toml contains required sections
+  entry: check_pyproject_sections
+  language: python
+  always_run: true
+  pass_filenames: false
+
+- id: check-package-init
+  name: Check Package Init
+  description: Check that package __init__.py files are correctly structured
+  entry: check_package_init
+  language: python
+  always_run: true
+  pass_filenames: false
+
+- id: check-cells-structure
+  name: Check Cells Structure
+  description: Check that cells directory follows expected structure
+  entry: check_cells_structure
+  language: python
+  always_run: true
+  pass_filenames: false
+
+- id: check-tech-structure
+  name: Check Tech Structure
+  description: Check that tech directory follows expected structure
+  entry: check_tech_structure
+  language: python
+  always_run: true
+  pass_filenames: false
+
+- id: check-pdk-object
+  name: Check PDK Object
+  description: Check that PDK object is correctly defined
+  entry: check_pdk_object
+  language: python
+  always_run: true
+  pass_filenames: false
+
+- id: check-test-structure
+  name: Check Test Structure
+  description: Check that test directory follows expected structure
+  entry: check_test_structure
+  language: python
+  always_run: true
+  pass_filenames: false
+
+- id: check-makefile-targets
+  name: Check Makefile Targets
+  description: Check that Makefile contains required targets
+  entry: check_makefile_targets
+  language: python
+  always_run: true
+  pass_filenames: false
+
+- id: check-workflows
+  name: Check Workflows
+  description: Check that GitHub Actions workflows are correctly configured
+  entry: check_workflows
+  language: python
+  always_run: true
+  pass_filenames: false
+
+- id: check-multi-band
+  name: Check Multi Band
+  description: Check multi-band configuration
+  entry: check_multi_band
+  language: python
+  always_run: true
+  pass_filenames: false
+
+- id: check-no-raw-layers
+  name: Check No Raw Layers
+  description: Check that no raw layer references exist in cells
+  entry: check_no_raw_layers
+  language: python
+  always_run: true
+  pass_filenames: false
+
+- id: check-no-main-in-cells
+  name: Check No Main In Cells
+  description: Check that cells do not contain if __name__ == "__main__" blocks
+  entry: check_no_main_in_cells
+  language: python
+  always_run: true
+  pass_filenames: false
+
+- id: check-precommit-config
+  name: Check Precommit Config
+  description: Check that .pre-commit-config.yaml is correctly configured
+  entry: check_precommit_config
+  language: python
+  always_run: true
+  pass_filenames: false
+
+- id: check-version-sync
+  name: Check Version Sync
+  description: Check that version numbers are in sync across the repo
+  entry: check_version_sync
+  language: python
+  always_run: true
+  pass_filenames: false
