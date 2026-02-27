@@ -2,7 +2,10 @@ name-template: 'v$RESOLVED_VERSION'
 tag-template: 'v$RESOLVED_VERSION'
 change-template: '- $TITLE (#$NUMBER)'
 change-title-escapes: '\<*_&'
+template: |
+  # What's Changed
 
+  $CHANGES
 categories:
   - title: 'Breaking'
     label: 'breaking'
