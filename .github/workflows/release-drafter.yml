@@ -1,6 +1,11 @@
 name: Release Drafter
 on:
-  workflow_call:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [edited, opened, reopened, synchronize, unlabeled, labeled]
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
@@ -14,4 +19,3 @@ jobs:
       - uses: release-drafter/release-drafter@v6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
