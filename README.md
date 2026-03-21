@@ -381,8 +381,8 @@ For PDK repositories:
 - `ANTHROPIC_API_KEY` - For Claude code reviews (`claude-pr-review.yml`)
 
 For this repository (push-compliance):
-- `GH_APP_ID` - GitHub App ID for cross-repo PRs
-- `GH_APP_PRIVATE_KEY` - GitHub App private key for cross-repo PRs
+- `GF_DEV_BOT_GH_APP_ID` - GitHub App ID for cross-repo PRs
+- `GF_DEV_BOT_GH_APP_PRIVATE_KEY` - GitHub App private key for cross-repo PRs
 
 ### GitHub Pages (for documentation)
 Enable GitHub Pages in your repository settings:
