@@ -6,7 +6,8 @@ updates:
       interval: monthly
 
   - package-ecosystem: github-actions
+    cooldown:
+      default-days: 7
     directory: /
     schedule:
       interval: monthly
-      
