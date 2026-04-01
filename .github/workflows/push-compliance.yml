@@ -50,7 +50,7 @@ jobs:
         id: app-token
         uses: actions/create-github-app-token@f8d387b68d61c58ab83c6c016672934102569859 # v3.0.0
         with:
-          app-id: ${{ secrets.GF_DEV_BOT_GH_APP_ID }}
+          app-id: ${{ vars.GF_DEV_BOT_GH_APP_ID }}
           private-key: ${{ secrets.GF_DEV_BOT_GH_APP_PRIVATE_KEY }}
           owner: ${{ steps.parse.outputs.owner }}
           repositories: ${{ steps.parse.outputs.repo }}
