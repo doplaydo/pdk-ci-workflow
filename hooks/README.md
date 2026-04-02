@@ -4,7 +4,7 @@ Pre-commit hook scripts for PDK template compliance. These are referenced by `.p
 
 Each hook is a self-contained Python script that validates some aspect of a PDK repository's structure and configuration. Hooks use **errors** for required items (fail the hook) and **warnings** for recommended items (print but pass).
 
-## Available Hooks (15)
+## Available Hooks (14)
 
 ### Project Structure
 
@@ -34,12 +34,11 @@ Each hook is a self-contained Python script that validates some aspect of a PDK 
 | `check-workflows` | `check_workflows.py` | `.github/workflows/` has test_code.yml (or test.yml) with pre-commit job and test job; recommends release.yml |
 | `check-precommit-config` | `check_precommit_config.py` | `.pre-commit-config.yaml` includes required hooks (end-of-file-fixer, trailing-whitespace, ruff, ruff-format) and recommended hooks (nbstripout, codespell) |
 
-### Multi-band & Dependencies
+### Multi-band
 
 | Hook ID | Source | What it checks |
 |---------|--------|---------------|
 | `check-multi-band` | `check_multi_band.py` | For multi-band PDKs (2+ band directories): consistent module sets per band (cells, tech, models), corresponding test files, shared layers at package root. Silently passes for single-band PDKs. |
-| `requires-pytz` | `check_requires_pytz.py` | Ensures `pytz` is in `[project.dependencies]` of pyproject.toml; auto-injects if missing |
 
 ## Shared Utilities (`_utils.py`)
 

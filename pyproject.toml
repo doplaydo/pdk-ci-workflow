@@ -10,7 +10,6 @@ dependencies = [
 ]
 
 [project.scripts]
-check_requires_pytz = "hooks.check_requires_pytz:check_pyproject"
 check_required_files = "hooks.check_required_files:main"
 check_pyproject_sections = "hooks.check_pyproject_sections:main"
 check_package_init = "hooks.check_package_init:main"
