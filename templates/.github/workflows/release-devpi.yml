@@ -1,0 +1,27 @@
+name: PDK
+on:
+  push:
+    branches:
+      - release*
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  release:
+    uses: doplaydo/pdk-ci-workflow/.github/workflows/release.yml@{{VERSION}}
+    with:
+      release_target: devpi
+      upload_uv_lock: true
+      devpi_dev_orgs: |
+        # DoPlayDo
+        3b166b0a-0737-4cfc-ac9f-58cfd2562e5d
+      devpi_prod_orgs: |
+        # DoPlayDo
+        01660aaf-92f9-42a7-bd2d-0df7de79ce8b
+    secrets:
+      DEVPI_USERNAME: ${{ secrets.DEVPI_USERNAME }}
+      DEVPI_PASSWORD: ${{ secrets.DEVPI_PASSWORD }}
+      DEVPI_USERNAME_DEV: ${{ secrets.DEVPI_USERNAME_DEV }}
+      DEVPI_PASSWORD_DEV: ${{ secrets.DEVPI_PASSWORD_DEV }}
+      GFP_API_KEY: ${{ secrets.GFP_API_KEY }}

@@ -1,0 +1,13 @@
+name: Release
+on:
+  push:
+    tags: "v*"
+
+jobs:
+  release:
+    uses: doplaydo/pdk-ci-workflow/.github/workflows/release.yml@{{VERSION}}
+    with:
+      release_target: pypi
+    secrets:
+      PYPI_USERNAME: ${{ secrets.PYPI_USERNAME }}
+      PYPI_PASSWORD: ${{ secrets.PYPI_PASSWORD }}

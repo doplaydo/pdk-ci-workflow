@@ -1,0 +1,441 @@
+name: Release
+
+on:
+  workflow_call:
+    inputs:
+      # ── Build configuration ──────────────────────────────────────────
+      pre_build_command:
+        type: string
+        default: 'make rm-samples'
+        description: 'Command to run before building wheels (empty string to skip)'
+      use_just:
+        type: boolean
+        default: false
+        description: 'Install just command runner via extractions/setup-just'
+      cibw_environment_macos:
+        type: string
+        default: ''
+        description: 'Extra CIBW_ENVIRONMENT_MACOS value (e.g. MACOSX_DEPLOYMENT_TARGET=14.0)'
+      windows_arm:
+        type: boolean
+        default: true
+        description: 'Include ARM64 in Windows wheel builds'
+      checkout_submodules:
+        type: string
+        default: 'false'
+        description: 'Submodule checkout mode (false, true, or recursive)'
+
+      # ── Release target ───────────────────────────────────────────────
+      # Pick ONE of: devpi, pypi, pypi-trusted, none
+      release_target:
+        type: string
+        default: 'devpi'
+        description: 'Where to publish: devpi | pypi | pypi-trusted | none'
+
+      # ── DevPI configuration ─────────────────────────────────────────
+      devpi_prod_orgs:
+        type: string
+        default: ''
+        description: 'Newline-delimited org UUIDs for prod DevPI uploads'
+      devpi_dev_orgs:
+        type: string
+        default: ''
+        description: 'Newline-delimited org UUIDs for dev DevPI uploads'
+
+      # ── PyPI configuration ──────────────────────────────────────────
+      pypi_build_command:
+        type: string
+        default: 'make build'
+        description: 'Build command for PyPI sdist (e.g. make modules build)'
+      pypi_use_docker:
+        type: boolean
+        default: false
+        description: 'Run PyPI build inside ghcr.io/gdsfactory/gdsfactory:main container'
+
+      # ── GitHub Release configuration ────────────────────────────────
+      upload_uv_lock:
+        type: boolean
+        default: false
+        description: 'Upload uv.lock to GitHub release assets'
+      upload_requirements_txt:
+        type: boolean
+        default: false
+        description: 'Generate and upload requirements.txt to GitHub release assets'
+      ligentec_release_style:
+        type: boolean
+        default: false
+        description: 'Use draft-delete-recreate release pattern instead of editing existing draft'
+
+      # ── PDF documentation ───────────────────────────────────────────
+      build_pdf:
+        type: boolean
+        default: false
+        description: 'Build PDF documentation via LaTeX'
+      pdf_filename_prefix:
+        type: string
+        default: 'docs'
+        description: 'Prefix for PDF filename (produces {prefix}-{tag}.pdf)'
+      pdf_install_command:
+        type: string
+        default: 'make dev'
+        description: 'Command to install docs dependencies'
+      pdf_build_command:
+        type: string
+        default: 'make docs-pdf'
+        description: 'Command to build PDF documentation'
+
+    secrets:
+      DEVPI_USERNAME:
+        required: false
+      DEVPI_PASSWORD:
+        required: false
+      DEVPI_USERNAME_DEV:
+        required: false
+      DEVPI_PASSWORD_DEV:
+        required: false
+      PYPI_USERNAME:
+        required: false
+      PYPI_PASSWORD:
+        required: false
+      GFP_API_KEY:
+        required: false
+      SIMCLOUD_APIKEY:
+        required: false
+
+env:
+  GFP_API_KEY: ${{ secrets.GFP_API_KEY }}
+  SIMCLOUD_APIKEY: ${{ secrets.SIMCLOUD_APIKEY }}
+
+jobs:
+  # ════════════════════════════════════════════════════════════════════
+  # Build wheels (DevPI releases only)
+  # ════════════════════════════════════════════════════════════════════
+  build-wheels:
+    if: inputs.release_target == 'devpi'
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            cibw_archs: 'native'
+          - os: ubuntu-arm-2core
+            cibw_archs: 'aarch64'
+          - os: windows-latest
+            cibw_archs: >-
+              ${{ inputs.windows_arm && 'native ARM64' || 'native' }}
+          - os: macos-latest
+            cibw_archs: 'native arm64'
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          submodules: ${{ inputs.checkout_submodules }}
+
+      - if: inputs.use_just
+        uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v3
+
+      - name: Pre-build
+        if: inputs.pre_build_command != ''
+        run: ${{ inputs.pre_build_command }}
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@faf86a6ed7efa889faf6996aa23820831055001a # v3.3.1
+        env:
+          CIBW_ARCHS: ${{ matrix.cibw_archs }}
+          CIBW_SKIP: '*-musllinux* pp*'
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
+          CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
+          CIBW_ENVIRONMENT_MACOS: ${{ inputs.cibw_environment_macos }}
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v7
+        with:
+          name: wheels-${{ matrix.os }}
+          path: ./wheelhouse/*.whl
+
+  # ════════════════════════════════════════════════════════════════════
+  # Build PDF documentation (optional)
+  # ════════════════════════════════════════════════════════════════════
+  build-doc-pdf:
+    if: inputs.build_pdf
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          submodules: ${{ inputs.checkout_submodules }}
+
+      - if: inputs.use_just
+        uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v3
+
+      - name: Pre-build
+        if: inputs.pre_build_command != ''
+        run: ${{ inputs.pre_build_command }}
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: '3.12'
+
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+
+      - name: Install dependencies
+        run: |
+          ${{ inputs.pdf_install_command }}
+          sudo apt-get update
+          sudo apt-get install -y texlive-latex-extra \
+                     texlive-fonts-extra \
+                     texlive-xetex latexmk \
+                     xindy
+
+      - name: Build PDF
+        run: |
+          ${{ inputs.pdf_build_command }}
+          mv docs.pdf ${{ inputs.pdf_filename_prefix }}-${{ github.ref_name }}.pdf
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v7
+        with:
+          name: docs
+          path: ./${{ inputs.pdf_filename_prefix }}-${{ github.ref_name }}.pdf
+
+  # ════════════════════════════════════════════════════════════════════
+  # Release to DevPI (dev + prod registries)
+  # ════════════════════════════════════════════════════════════════════
+  release-devpi:
+    if: inputs.release_target == 'devpi'
+    needs: build-wheels
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: '3.12'
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v8
+        with:
+          pattern: wheels-*
+          path: dist
+          merge-multiple: true
+
+      - name: Release to DevPI dev
+        if: inputs.devpi_dev_orgs != ''
+        env:
+          TWINE_USERNAME: ${{ secrets.DEVPI_USERNAME_DEV }}
+          TWINE_PASSWORD: ${{ secrets.DEVPI_PASSWORD_DEV }}
+        run: |
+          pip install twine
+          while IFS= read -r line; do
+            # Skip blank lines and comments
+            [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+            repo_id=$(echo "$line" | awk '{print $1}')
+            echo "Uploading to dev DevPI org: $repo_id"
+            twine upload --repository-url "https://dev.gdsfactory.com/api/upload-packages/$repo_id" dist/*
+          done <<< "${{ inputs.devpi_dev_orgs }}"
+
+      - name: Release to DevPI prod
+        if: inputs.devpi_prod_orgs != ''
+        env:
+          TWINE_USERNAME: ${{ secrets.DEVPI_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.DEVPI_PASSWORD }}
+        run: |
+          pip install twine
+          while IFS= read -r line; do
+            # Skip blank lines and comments
+            [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+            repo_id=$(echo "$line" | awk '{print $1}')
+            echo "Uploading to prod DevPI org: $repo_id"
+            twine upload --repository-url "https://prod.gdsfactory.com/api/upload-packages/$repo_id" dist/*
+          done <<< "${{ inputs.devpi_prod_orgs }}"
+
+  # ════════════════════════════════════════════════════════════════════
+  # Release to PyPI (standard twine upload)
+  # ════════════════════════════════════════════════════════════════════
+  release-pypi:
+    if: inputs.release_target == 'pypi' && !inputs.pypi_use_docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          submodules: ${{ inputs.checkout_submodules }}
+
+      - if: inputs.use_just
+        uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v3
+
+      - name: Pre-build
+        if: inputs.pre_build_command != ''
+        run: ${{ inputs.pre_build_command }}
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: '3.12'
+
+      - name: Build and publish
+        env:
+          TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+        run: |
+          python -m pip install --upgrade pip
+          pip install setuptools wheel twine
+          ${{ inputs.pypi_build_command }}
+          twine upload dist/*
+
+  # ════════════════════════════════════════════════════════════════════
+  # Release to PyPI (Docker container variant)
+  # ════════════════════════════════════════════════════════════════════
+  release-pypi-docker:
+    if: inputs.release_target == 'pypi' && inputs.pypi_use_docker
+    runs-on: ubuntu-latest
+    container: ghcr.io/gdsfactory/gdsfactory:main
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          submodules: ${{ inputs.checkout_submodules }}
+
+      - name: Pre-build
+        if: inputs.pre_build_command != ''
+        run: ${{ inputs.pre_build_command }}
+
+      - name: Build and publish
+        env:
+          TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+        run: |
+          python -m pip install --upgrade pip
+          pip install setuptools wheel twine
+          ${{ inputs.pypi_build_command }}
+          twine upload dist/*
+
+  # ════════════════════════════════════════════════════════════════════
+  # Release to PyPI (trusted publisher / OIDC)
+  # ════════════════════════════════════════════════════════════════════
+  release-pypi-trusted:
+    if: inputs.release_target == 'pypi-trusted'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v8
+        with:
+          name: dist
+          path: dist
+
+      - uses: pypa/gh-action-pypi-publish@76f52bc884231f62b54f72e44af3222aff7e3a45 # release/v1
+        with:
+          user: ${{ secrets.PYPI_USERNAME }}
+          password: ${{ secrets.PYPI_PASSWORD }}
+          packages-dir: dist
+
+  # ════════════════════════════════════════════════════════════════════
+  # Publish GitHub Release (mark draft as non-draft, upload lock files)
+  # ════════════════════════════════════════════════════════════════════
+  release-environment:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags') && !inputs.ligentec_release_style
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          submodules: ${{ inputs.checkout_submodules }}
+
+      - name: Publish Release
+        run: |
+          gh release edit ${{ github.ref_name }} --draft=false
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload uv.lock
+        if: inputs.upload_uv_lock
+        run: |
+          if [ -f uv.lock ]; then
+            gh release upload ${{ github.ref_name }} uv.lock --clobber
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload requirements.txt
+        if: inputs.upload_requirements_txt
+        run: |
+          pip install .
+          pip freeze > requirements.txt
+          gh release upload ${{ github.ref_name }} requirements.txt --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ════════════════════════════════════════════════════════════════════
+  # Upload artifacts to GitHub Release
+  # ════════════════════════════════════════════════════════════════════
+  release-gh:
+    if: >-
+      github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+      && inputs.release_target == 'devpi'
+      && !inputs.ligentec_release_style
+    needs:
+      - release-devpi
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v8
+        with:
+          pattern: wheels-*
+          path: dist
+          merge-multiple: true
+
+      - name: Download PDF
+        if: inputs.build_pdf
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v8
+        with:
+          name: docs
+          path: dist
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631 # v2
+        with:
+          files: dist/*
+
+  # ════════════════════════════════════════════════════════════════════
+  # Ligentec-style release (draft-delete-recreate + artifact upload)
+  # ════════════════════════════════════════════════════════════════════
+  release-gh-ligentec:
+    if: >-
+      github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+      && inputs.ligentec_release_style
+    needs:
+      - release-devpi
+      - build-doc-pdf
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v8
+        with:
+          pattern: wheels-*
+          path: dist
+          merge-multiple: true
+
+      - name: Download PDF
+        if: inputs.build_pdf
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v8
+        with:
+          name: docs
+          path: dist
+
+      - name: Create or convert release from draft
+        run: |
+          new_version="$(echo '${{ github.ref_name }}' | sed 's/^v//g')"
+          if gh release list | grep Draft; then
+            old_version="$(gh release list | grep Draft | head -1 | cut -f1 | sed 's/^[ ]*v//g')"
+            body=$(gh release view "v$old_version" --json body -q ".body" | sed "s/\.\.\.v$old_version/...v$new_version/g")
+            echo "$body"
+            gh release delete "v$old_version" --yes
+            gh release create "v$new_version" --title "v$new_version" --notes "$body"
+          else
+            gh release create "v$new_version" --title "v$new_version"
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Upload artifacts to release
+        uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631 # v2
+        with:
+          files: dist/*

@@ -1,0 +1,62 @@
+name: Build Wheels
+
+on:
+  workflow_call:
+    inputs:
+      pre_build_command:
+        type: string
+        default: 'make rm-samples'
+        description: 'Command to run before building wheels (empty string to skip)'
+      use_just:
+        type: boolean
+        default: false
+        description: 'Install just command runner via extractions/setup-just'
+      cibw_environment_macos:
+        type: string
+        default: ''
+        description: 'Extra CIBW_ENVIRONMENT_MACOS value (e.g. MACOSX_DEPLOYMENT_TARGET=14.0)'
+      windows_arm:
+        type: boolean
+        default: true
+        description: 'Include ARM64 in Windows wheel builds'
+
+jobs:
+  build-wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            cibw_archs: 'native'
+          - os: ubuntu-arm-2core
+            cibw_archs: 'aarch64'
+          - os: windows-latest
+            cibw_archs: >-
+              ${{ inputs.windows_arm && 'native ARM64' || 'native' }}
+          - os: macos-latest
+            cibw_archs: 'native arm64'
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - if: inputs.use_just
+        uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v3
+
+      - name: Pre-build
+        if: inputs.pre_build_command != ''
+        run: ${{ inputs.pre_build_command }}
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@faf86a6ed7efa889faf6996aa23820831055001a # v3.3.1
+        env:
+          CIBW_ARCHS: ${{ matrix.cibw_archs }}
+          CIBW_SKIP: '*-musllinux* pp*'
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
+          CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
+          CIBW_ENVIRONMENT_MACOS: ${{ inputs.cibw_environment_macos }}
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v7
+        with:
+          name: wheels-${{ matrix.os }}
+          path: ./wheelhouse/*.whl
