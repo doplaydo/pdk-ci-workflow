@@ -3,9 +3,6 @@ repos:
   - repo: https://github.com/doplaydo/pdk-ci-workflow
     rev: "{{VERSION}}"
     hooks:
-      - id: requires-pytz
-        name: Ensure pytz in pyproject.toml
-        always_run: true
       - id: check-required-files
         always_run: true
       - id: check-pyproject-sections

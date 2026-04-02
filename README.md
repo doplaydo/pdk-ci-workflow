@@ -12,7 +12,7 @@ This repository provides reusable automation tooling for Process Design Kit (PDK
 - Standardized testing, linting, and type checking across all PDKs
 - Automated documentation builds and deployments
 - AI-powered code reviews via Claude
-- 15 pre-commit hooks enforcing PDK structural compliance
+- 14 pre-commit hooks enforcing PDK structural compliance
 - Semantic versioning and automated release notes
 - Template files for onboarding new PDK repos
 
@@ -85,7 +85,6 @@ repos:
   - repo: https://github.com/doplaydo/pdk-ci-workflow
     rev: v1  # Use specific version tag
     hooks:
-      - id: requires-pytz
       - id: check-required-files
       - id: check-pyproject-sections
       - id: check-package-init
@@ -237,7 +236,6 @@ repos:
   - repo: https://github.com/doplaydo/pdk-ci-workflow
     rev: v1  # Use specific version tag
     hooks:
-      - id: requires-pytz
       - id: check-required-files
       - id: check-pyproject-sections
       # ... add hooks as needed
@@ -278,12 +276,11 @@ pre-commit install
 | `check-workflows` | `.github/workflows/` has test_code.yml with pre-commit and test jobs |
 | `check-precommit-config` | `.pre-commit-config.yaml` includes required hooks (trailing-whitespace, end-of-file-fixer, ruff, ruff-format) |
 
-#### Multi-band & Dependencies
+#### Multi-band
 
 | Hook ID | What it checks |
 |---------|---------------|
 | `check-multi-band` | For multi-band PDKs: consistent module sets per band, corresponding tests, shared layers |
-| `requires-pytz` | Ensures `pytz` is in `[project.dependencies]`; auto-injects if missing |
 
 ## Templates
 
@@ -293,7 +290,7 @@ Reference configuration files are provided in `templates/` for onboarding new PD
 
 | Template | Purpose |
 |----------|---------|
-| `.pre-commit-config.yaml` | Pre-commit hook config with all 15 PDK compliance hooks |
+| `.pre-commit-config.yaml` | Pre-commit hook config with all 14 PDK compliance hooks |
 | `.github/workflows/test_code.yml` | Thin wrapper calling reusable test workflow |
 | `.github/workflows/pages.yml` | Thin wrapper calling reusable docs workflow |
 | `.github/workflows/claude-pr-review.yml` | Thin wrapper for AI code review |
