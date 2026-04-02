@@ -14,9 +14,3 @@ Reusable workflows are complete, self-contained workflow definitions that live i
 | `release-drafter.yml` | `workflow_call` | update_release_draft | None | Auto-drafted release notes with semantic versioning based on PR labels |
 
 PDK repos create thin wrapper workflows that call these. See the main [README](../../README.md#reusable-workflows) for usage examples, or use the templates from `templates/.github/workflows/`.
-
-### Internal (run by this repo)
-
-| Workflow | Trigger | Description |
-|----------|---------|-------------|
-| `push-compliance.yml` | Push to `main`, `workflow_dispatch` | Syncs templates to all PDK repos in `pdks.yml`, runs pre-commit, and opens compliance PRs. Uses a GitHub App token for cross-repo access. |
