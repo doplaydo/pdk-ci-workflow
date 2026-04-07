@@ -9,7 +9,7 @@ from pathlib import Path
 from hooks._utils import CheckResult
 
 REQUIRED_TARGETS = {"install", "test"}
-RECOMMENDED_TARGETS = {"test-force", "docs", "build", "update-pre"}
+RECOMMENDED_TARGETS = {"test-force", "docs", "build", "update-pre", "dev"}
 
 
 def _get_target_bodies(content: str) -> dict[str, str]:
