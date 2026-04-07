@@ -30,7 +30,7 @@ Each hook is a self-contained Python script that validates some aspect of a PDK 
 | Hook ID | Source | What it checks |
 |---------|--------|---------------|
 | `check-test-structure` | `check_test_structure.py` | `tests/` directory exists with test files, GDS reference directories, `difftest()` calls, and `data_regression` usage |
-| `check-makefile-targets` | `check_makefile_targets.py` | Required targets: install, test. Recommended: docs, build, test-force, update-pre. Content checks: uv sync in install, pytest in test |
+| `check-makefile-targets` | `check_makefile_targets.py` | Required targets: install, test. Recommended: docs, build, test-force, update-pre, dev. Content checks: uv sync in install, pytest in test |
 | `check-workflows` | `check_workflows.py` | `.github/workflows/` has test_code.yml (or test.yml) with pre-commit job and test job; recommends release.yml |
 | `check-precommit-config` | `check_precommit_config.py` | `.pre-commit-config.yaml` includes required hooks (end-of-file-fixer, trailing-whitespace, ruff, ruff-format) and recommended hooks (nbstripout, codespell) |
 
