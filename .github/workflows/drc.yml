@@ -1,9 +1,9 @@
 name: DRC Check
 on:
-  workflow_dispatch:
-  push:
-    branches:
-      - main
+  workflow_call:
+    secrets:
+      GFP_API_KEY:
+        required: false
 env:
   GFP_API_KEY: ${{ secrets.GFP_API_KEY }}
 permissions:
