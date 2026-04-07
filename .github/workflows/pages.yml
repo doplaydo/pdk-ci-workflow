@@ -1,11 +1,19 @@
 name: build docs
 on:
   workflow_call:
+    secrets:
+      GFP_API_KEY:
+        required: false
+      SIMCLOUD_APIKEY:
+        required: false
 jobs:
   build-docs:
     if: github.event_name != 'pull_request' || github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
     name: Sphinx docs to gh-pages
+    env:
+      GFP_API_KEY: ${{ secrets.GFP_API_KEY }}
+      SIMCLOUD_APIKEY: ${{ secrets.SIMCLOUD_APIKEY }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - name: Set up Python
