@@ -1,0 +1,319 @@
+name: Downstream PDK Test
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: downstream-test-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  find-green-pdks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      matrix: ${{ steps.build-matrix.outputs.matrix }}
+      has_repos: ${{ steps.build-matrix.outputs.has_repos }}
+    steps:
+      - name: Find PDK repos that use pdk-ci-workflow and are green on main
+        id: build-matrix
+        env:
+          GH_TOKEN: ${{ secrets.PDK_DOWNSTREAM_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          # Fetch .gitmodules from doplaydo/pdks to get the PDK repo list
+          GITMODULES=$(gh api repos/doplaydo/pdks/contents/.gitmodules \
+            --jq '.content' | base64 -d)
+
+          # Extract org/repo pairs from git URLs
+          REPOS=$(echo "$GITMODULES" | grep 'url = ' | \
+            sed -E 's|.*url = git@github\.com:||; s|\.git$||')
+
+          GREEN_REPOS="[]"
+          COUNT=0
+          MAX=3
+
+          for REPO in $REPOS; do
+            [ "$COUNT" -ge "$MAX" ] && break
+
+            echo "::group::Checking $REPO"
+
+            # 1. Check if repo has workflow files referencing pdk-ci-workflow
+            WORKFLOW_FILES=$(gh api "repos/${REPO}/contents/.github/workflows" \
+              --jq '[.[] | select(.name | endswith(".yml") or endswith(".yaml")) | .name]' 2>/dev/null) || {
+              echo "  No .github/workflows/ directory — skipping"
+              echo "::endgroup::"
+              continue
+            }
+
+            USES_UPSTREAM=false
+            for WF in $(echo "$WORKFLOW_FILES" | jq -r '.[]'); do
+              CONTENT=$(gh api "repos/${REPO}/contents/.github/workflows/${WF}" \
+                --jq '.content' 2>/dev/null | base64 -d 2>/dev/null) || continue
+              if echo "$CONTENT" | grep -q 'doplaydo/pdk-ci-workflow/'; then
+                USES_UPSTREAM=true
+                break
+              fi
+            done
+
+            if [ "$USES_UPSTREAM" = false ]; then
+              echo "  No workflows reference pdk-ci-workflow — skipping"
+              echo "::endgroup::"
+              continue
+            fi
+
+            # 2. Check CI status on main via check-runs API
+            STATE=$(gh api "repos/${REPO}/commits/main/check-runs" \
+              --jq '
+                if (.check_runs | length) == 0 then "no_checks"
+                elif (.check_runs | map(.conclusion) | all(. == "success" or . == "skipped")) then "success"
+                else "not_green"
+                end
+              ' 2>/dev/null) || STATE="error"
+
+            echo "  Uses pdk-ci-workflow: yes | CI status: ${STATE}"
+
+            if [ "$STATE" = "success" ]; then
+              GREEN_REPOS=$(echo "$GREEN_REPOS" | jq -c --arg repo "$REPO" '. + [$repo]')
+              COUNT=$((COUNT + 1))
+              echo "  ✓ Selected as candidate #${COUNT}"
+            fi
+
+            echo "::endgroup::"
+            sleep 0.5
+          done
+
+          echo "Found ${COUNT} green PDK repo(s) that use pdk-ci-workflow"
+
+          if [ "$COUNT" -gt 0 ]; then
+            MATRIX=$(echo "$GREEN_REPOS" | jq -c '{"include": [.[] | {"repo": .}]}')
+            echo "matrix=${MATRIX}" >> "$GITHUB_OUTPUT"
+            echo "has_repos=true" >> "$GITHUB_OUTPUT"
+          else
+            echo 'matrix={"include":[]}' >> "$GITHUB_OUTPUT"
+            echo "has_repos=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  downstream-test:
+    needs: find-green-pdks
+    if: needs.find-green-pdks.outputs.has_repos == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.find-green-pdks.outputs.matrix) }}
+    env:
+      GH_TOKEN: ${{ secrets.PDK_DOWNSTREAM_TOKEN }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      PR_BRANCH: ${{ github.head_ref }}
+      UPSTREAM_PR_URL: ${{ github.event.pull_request.html_url }}
+    steps:
+      - name: Clone PDK repo
+        run: |
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/${{ matrix.repo }}.git" pdk-repo
+          cd pdk-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create branch and rewire workflows
+        id: rewire
+        working-directory: pdk-repo
+        run: |
+          set -euo pipefail
+          BRANCH_NAME="downstream-test/${PR_NUMBER}"
+
+          git checkout -b "${BRANCH_NAME}"
+
+          CHANGED=false
+          for f in .github/workflows/*.yml .github/workflows/*.yaml; do
+            [ -f "$f" ] || continue
+            if grep -q 'doplaydo/pdk-ci-workflow/' "$f"; then
+              sed -i \
+                "s|doplaydo/pdk-ci-workflow/\(\.github/workflows/[^@]*\)@main|doplaydo/pdk-ci-workflow/\1@${PR_BRANCH}|g" \
+                "$f"
+              CHANGED=true
+            fi
+          done
+
+          if [ "$CHANGED" = false ]; then
+            echo "No workflow files reference pdk-ci-workflow"
+            echo "skipped=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "skipped=false" >> "$GITHUB_OUTPUT"
+          echo "branch=${BRANCH_NAME}" >> "$GITHUB_OUTPUT"
+
+          git add -A
+          git commit -m "ci: downstream test for pdk-ci-workflow PR #${PR_NUMBER}"
+          git push origin "${BRANCH_NAME}"
+
+      - name: Create draft PR to trigger CI
+        id: create-pr
+        if: steps.rewire.outputs.skipped != 'true'
+        working-directory: pdk-repo
+        run: |
+          PR_URL=$(gh pr create \
+            --repo "${{ matrix.repo }}" \
+            --head "downstream-test/${PR_NUMBER}" \
+            --base main \
+            --title "CI: downstream test for pdk-ci-workflow PR #${PR_NUMBER}" \
+            --body "$(cat <<EOF
+          Automated downstream compatibility test.
+
+          Upstream PR: ${UPSTREAM_PR_URL}
+
+          This PR rewires CI workflow references to point at the upstream PR branch
+          to validate that the proposed changes do not break this PDK's CI.
+
+          **Do not merge.** This PR will be auto-closed on completion.
+          EOF
+          )" \
+            --draft)
+          echo "pr_url=${PR_URL}" >> "$GITHUB_OUTPUT"
+          echo "Created draft PR: ${PR_URL}"
+
+      - name: Wait for CI to complete
+        id: wait-ci
+        if: steps.rewire.outputs.skipped != 'true'
+        run: |
+          REPO="${{ matrix.repo }}"
+          BRANCH="downstream-test/${PR_NUMBER}"
+          MAX_WAIT=1800
+          POLL_INTERVAL=30
+          ELAPSED=0
+
+          # Wait for workflows to be triggered
+          sleep 60
+          ELAPSED=60
+
+          while [ "$ELAPSED" -lt "$MAX_WAIT" ]; do
+            SHA=$(gh api "repos/${REPO}/git/refs/heads/${BRANCH}" \
+              --jq '.object.sha' 2>/dev/null) || break
+
+            RESULT=$(gh api "repos/${REPO}/commits/${SHA}/check-runs" --jq '
+              if (.check_runs | length) == 0 then "waiting"
+              elif (.check_runs | all(.status == "completed")) then
+                if (.check_runs | map(.conclusion) | all(. == "success" or . == "skipped")) then "success"
+                else "failure"
+                end
+              else "in_progress"
+              end
+            ')
+
+            echo "[${ELAPSED}s] ${REPO}: ${RESULT}"
+
+            if [ "$RESULT" = "success" ] || [ "$RESULT" = "failure" ]; then
+              echo "result=${RESULT}" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+
+            sleep "$POLL_INTERVAL"
+            ELAPSED=$((ELAPSED + POLL_INTERVAL))
+          done
+
+          echo "result=timeout" >> "$GITHUB_OUTPUT"
+
+      - name: Write result artifact
+        if: always()
+        run: |
+          RESULT="${{ steps.wait-ci.outputs.result }}"
+          if [ "${{ steps.rewire.outputs.skipped }}" = "true" ]; then
+            RESULT="skipped"
+          fi
+          [ -z "$RESULT" ] && RESULT="error"
+
+          mkdir -p results
+          echo "{\"repo\":\"${{ matrix.repo }}\",\"result\":\"${RESULT}\"}" > "results/${{ strategy.job-index }}.json"
+
+      - name: Upload result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: downstream-result-${{ strategy.job-index }}
+          path: results/
+
+      - name: Cleanup draft PR and branch
+        if: always() && steps.rewire.outputs.skipped != 'true'
+        run: |
+          REPO="${{ matrix.repo }}"
+          BRANCH="downstream-test/${PR_NUMBER}"
+
+          # Close the draft PR with branch deletion
+          PR_NUM=$(gh pr list --repo "${REPO}" --head "${BRANCH}" \
+            --json number --jq '.[0].number' 2>/dev/null)
+          if [ -n "$PR_NUM" ]; then
+            gh pr close "${PR_NUM}" --repo "${REPO}" --delete-branch 2>/dev/null || true
+          fi
+
+          # Belt-and-suspenders: delete branch via API
+          gh api "repos/${REPO}/git/refs/heads/downstream-test/${PR_NUMBER}" \
+            -X DELETE 2>/dev/null || true
+
+  report:
+    needs: [find-green-pdks, downstream-test]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Download result artifacts
+        if: needs.find-green-pdks.outputs.has_repos == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: downstream-result-*
+          merge-multiple: true
+          path: results/
+
+      - name: Post PR comment with results
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          COMMENT="## Downstream Test Results"$'\n\n'
+
+          if [ "${{ needs.find-green-pdks.outputs.has_repos }}" != "true" ]; then
+            COMMENT+=":warning: No green PDK repos found that use pdk-ci-workflow. Downstream testing was skipped."$'\n'
+          else
+            COMMENT+="| PDK Repo | Result |"$'\n'
+            COMMENT+="|----------|--------|"$'\n'
+
+            for f in results/*.json; do
+              [ -f "$f" ] || continue
+              REPO=$(jq -r '.repo' "$f")
+              RESULT=$(jq -r '.result' "$f")
+
+              case "$RESULT" in
+                success)  ICON=":white_check_mark:" ;;
+                failure)  ICON=":x:" ;;
+                skipped)  ICON=":fast_forward:" ;;
+                timeout)  ICON=":hourglass:" ;;
+                *)        ICON=":question:" ;;
+              esac
+
+              COMMENT+="| \`${REPO}\` | ${ICON} ${RESULT} |"$'\n'
+            done
+
+            COMMENT+=$'\n'"Tested against branch \`${{ github.head_ref }}\`"$'\n'
+          fi
+
+          COMMENT+=$'\n'"---"$'\n'"*Automated downstream compatibility test*"
+
+          # Update existing comment or create new one
+          MARKER="## Downstream Test Results"
+          EXISTING=$(gh api "repos/${{ github.repository }}/issues/${PR_NUMBER}/comments" \
+            --jq ".[] | select(.body | startswith(\"${MARKER}\")) | .id" | head -1)
+
+          if [ -n "$EXISTING" ]; then
+            gh api "repos/${{ github.repository }}/issues/comments/${EXISTING}" \
+              -X PATCH -f body="${COMMENT}"
+          else
+            gh pr comment "${PR_NUMBER}" --body "${COMMENT}"
+          fi
