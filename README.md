@@ -272,7 +272,7 @@ pre-commit install
 
 | Hook ID | What it checks |
 |---------|---------------|
-| `check-makefile-targets` | Required targets (install, test) and recommended targets (docs, build, test-force, update-pre) |
+| `check-makefile-targets` | Required targets (install, test) and recommended targets (docs, build, test-force, update-pre, dev) |
 | `check-workflows` | `.github/workflows/` has test_code.yml with pre-commit and test jobs |
 | `check-precommit-config` | `.pre-commit-config.yaml` includes required hooks (trailing-whitespace, end-of-file-fixer, ruff, ruff-format) |
 
