@@ -131,8 +131,8 @@
   pass_filenames: false
   description: >
     Checks .pre-commit-config.yaml includes required hooks
-    (end-of-file-fixer, trailing-whitespace, ruff, ruff-format) and
-    recommended hooks (nbstripout, codespell).
+    (end-of-file-fixer, trailing-whitespace, ruff or ruff-lint, ruff-format)
+    and recommended hooks (nbstripout, codespell).
 
 - id: check-version-sync
   name: Verify version consistency
