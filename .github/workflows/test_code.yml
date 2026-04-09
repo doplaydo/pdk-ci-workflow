@@ -28,7 +28,8 @@ jobs:
     - name: Fetch canonical pre-commit config
       run: |
         curl -sf "https://raw.githubusercontent.com/doplaydo/pdk-ci-workflow/${{ inputs.pdk_ci_ref }}/templates/.pre-commit-config.yaml" \
-          -o .pre-commit-config.yaml
+          | sed 's/rev: main/rev: ${{ inputs.pdk_ci_ref }}/' \
+          > .pre-commit-config.yaml
     - uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
   test_code:
     runs-on: ubuntu-latest
