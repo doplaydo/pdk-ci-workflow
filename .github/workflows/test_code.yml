@@ -2,6 +2,12 @@ name: Test code
 
 on:
   workflow_call:
+    inputs:
+      pdk_ci_ref:
+        description: 'pdk-ci-workflow ref for canonical pre-commit config (default: main)'
+        required: false
+        default: 'main'
+        type: string
     secrets:
       GFP_API_KEY:
         required: false
@@ -21,7 +27,7 @@ jobs:
     - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
     - name: Fetch canonical pre-commit config
       run: |
-        curl -sf "https://raw.githubusercontent.com/doplaydo/pdk-ci-workflow/${{ github.workflow_sha }}/templates/.pre-commit-config.yaml" \
+        curl -sf "https://raw.githubusercontent.com/doplaydo/pdk-ci-workflow/${{ inputs.pdk_ci_ref }}/templates/.pre-commit-config.yaml" \
           -o .pre-commit-config.yaml
     - uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
   test_code:
