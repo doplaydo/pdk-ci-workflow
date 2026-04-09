@@ -1,4 +1,9 @@
 name: Test code
+
+# CI pre-commit uses the canonical config from pdk-ci-workflow (fetched
+# automatically by the reusable workflow). No local .pre-commit-config.yaml
+# needed in CI.
+
 on:
   pull_request:
   push:
