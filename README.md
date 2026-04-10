@@ -153,7 +153,7 @@ See [`hooks/README.md`](hooks/README.md) for detailed documentation.
 
 | Hook ID | What it checks |
 |---------|---------------|
-| `check-required-files` | README.md, LICENSE, Makefile, pyproject.toml, .pre-commit-config.yaml, tests/, workflows exist |
+| `check-required-files` | README.md, CHANGELOG.md, LICENSE, Makefile, pyproject.toml, .gitignore, .pre-commit-config.yaml, tests/, test workflow, release-drafter workflow |
 | `check-pyproject-sections` | Deep validation of pyproject.toml: build-system, project fields, ruff, codespell, pytest, tbump, mypy, towncrier, package-data (11 sub-checks) |
 | `check-package-init` | `__version__` defined as string literal, `__all__` defined in package `__init__.py` |
 | `check-version-sync` | Version consistency across pyproject.toml, tbump config, `__init__.py`, and README.md |
@@ -174,7 +174,7 @@ See [`hooks/README.md`](hooks/README.md) for detailed documentation.
 |---------|---------------|
 | `check-makefile-targets` | Required targets (install, test) and recommended targets (docs, build, test-force, update-pre, dev) |
 | `check-workflows` | `.github/workflows/` has test_code.yml with pre-commit and test jobs |
-| `check-precommit-config` | `.pre-commit-config.yaml` includes required hooks (trailing-whitespace, end-of-file-fixer, ruff, ruff-format) |
+| `check-precommit-config` | `.pre-commit-config.yaml` includes required hooks (trailing-whitespace, end-of-file-fixer, ruff or ruff-lint, ruff-format) |
 
 #### Multi-band
 
@@ -215,14 +215,12 @@ Check back for updates as composite actions are added to this repository.
 
 ## Configuration Files
 
-Some configuration files **cannot** be referenced remotely via GitHub Actions and must live directly in each PDK repository:
+Some configuration files **cannot** be referenced remotely and must live directly in each PDK repository:
 
-- `.github/CODEOWNERS` - Code ownership rules
-- `.github/dependabot.yml` - Dependency update configuration
-- `.github/release-drafter.yml` - Release note templates
-- `Makefile` - Build targets (`install`, `test`, `docs`)
-
-These files are provided as templates in `templates/`. Copy them manually into your PDK repository.
+- `.github/dependabot.yml` - Dependency update configuration (template provided)
+- `.github/release-drafter.yml` - Release note templates (template provided)
+- `.github/CODEOWNERS` - Code ownership rules (no template — repo-specific)
+- `Makefile` - Build targets: `install`, `test`, `docs`, `dev` (no template — repo-specific)
 
 ## Requirements
 
