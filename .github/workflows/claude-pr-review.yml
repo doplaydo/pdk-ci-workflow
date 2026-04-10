@@ -1,5 +1,9 @@
 name: Claude Auto Review
 on:
+  workflow_call:
+    secrets:
+      ANTHROPIC_API_KEY:
+        required: true
   pull_request:
     types: [opened, synchronize, reopened]
 permissions:

@@ -1,16 +1,32 @@
 # Reusable Workflows
 
-Reusable workflows are complete, self-contained workflow definitions that live in `.github/workflows/` and are triggered via `workflow_call`. When another repo calls a reusable workflow, it's delegating an entire job — the reusable workflow controls everything: which runner it uses, what permissions it has, what steps run, and how secrets are handled. The calling repo just says "run this job for me" and optionally passes in some inputs. This is ideal when you want to enforce a standardised process across your org where individual teams shouldn't be tweaking the internals.
+Reusable workflows are complete, self-contained workflow definitions triggered via `workflow_call`. When a PDK repo calls a reusable workflow, it delegates the entire job — the workflow controls the runner, permissions, steps, and secret handling. The calling repo just says "run this job for me."
+
+PDK repos create thin wrapper workflows that call these using `secrets: inherit`. See `templates/.github/workflows/` for ready-to-copy wrappers.
 
 ## Workflows
 
-### Reusable (called by PDK repos)
+| Workflow | Jobs | Secrets Used | Description |
+|----------|------|-------------|-------------|
+| `test_code.yml` | pre-commit, test_code, test_gfp | `GFP_API_KEY` | Pre-commit (fetches canonical config), pytest, GFP validation |
+| `pages.yml` | build-docs, deploy-docs | `GFP_API_KEY`, `SIMCLOUD_APIKEY` | Sphinx docs build and GitHub Pages deployment |
+| `claude-pr-review.yml` | review | `ANTHROPIC_API_KEY` | AI code review via Claude Sonnet 4 on PRs |
+| `release-drafter.yml` | update_release_draft | `GITHUB_TOKEN` | Auto-drafted release notes with semantic versioning |
+| `drc.yml` | drc | `GFP_API_KEY` | Design Rule Check with badge generation |
+| `issue.yml` | add-label | `GITHUB_TOKEN` | Auto-labels issues with "pdk" tag |
 
-| Workflow | Trigger | Jobs | Required Secrets | Description |
-|----------|---------|------|-----------------|-------------|
-| `test_code.yml` | `workflow_call` | pre-commit, test_code, test_gfp | `GFP_API_KEY` | Linting (ruff), type checking (pyright), pytest, GFP platform validation |
-| `pages.yml` | `workflow_call` | build-docs, deploy-docs | None | Sphinx docs build via `make docs` and GitHub Pages deployment |
-| `claude-pr-review.yml` | `workflow_call` | claude-review | `ANTHROPIC_API_KEY` | AI code review via Claude Sonnet 4 on PRs and `@claude` mentions |
-| `release-drafter.yml` | `workflow_call` | update_release_draft | None | Auto-drafted release notes with semantic versioning based on PR labels |
+## Example Usage
 
-PDK repos create thin wrapper workflows that call these. See the main [README](../../README.md#reusable-workflows) for usage examples, or use the templates from `templates/.github/workflows/`.
+```yaml
+# .github/workflows/test_code.yml (in a PDK repo)
+name: Test code
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    uses: doplaydo/pdk-ci-workflow/.github/workflows/test_code.yml@main
+    secrets: inherit
+```

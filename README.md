@@ -21,7 +21,7 @@ This repository provides reusable automation tooling for Process Design Kit (PDK
 This repository provides four complementary automation patterns:
 
 - **Reusable GitHub Actions Workflows** - Complete CI/CD jobs for testing, docs, releases, and code review
-- **Pre-commit Hooks** - 15 local development checks enforcing PDK organizational standards
+- **Pre-commit Hooks** - 14 PDK compliance checks plus 10 third-party tool wrappers (ruff, codespell, etc.) with centrally controlled versions
 - **Templates** - Reference configuration files for onboarding new PDK repos
 - **Composite Actions** - Shared step sequences for flexible workflow composition (in development)
 
@@ -62,7 +62,7 @@ Pre-commit hooks run locally on developer machines before commits are created. T
 
 The easiest way to onboard is to copy the template files provided in `templates/` into your repo.
 
-**1. Add reusable workflows** (copy from `templates/.github/workflows/`):
+**1. Copy workflow templates** from `templates/.github/workflows/` into your repo. Each is a minimal wrapper:
 ```yaml
 # .github/workflows/test_code.yml
 name: Test code
@@ -73,39 +73,20 @@ on:
 
 jobs:
   test:
-    uses: doplaydo/pdk-ci-workflow/.github/workflows/test_code.yml@v1
-    secrets:
-      GFP_API_KEY: ${{ secrets.GFP_API_KEY }}
+    uses: doplaydo/pdk-ci-workflow/.github/workflows/test_code.yml@main
+    secrets: inherit
 ```
 
-**2. Add pre-commit hooks** (copy from `templates/.pre-commit-config.yaml`):
-```yaml
-# .pre-commit-config.yaml
-repos:
-  - repo: https://github.com/doplaydo/pdk-ci-workflow
-    rev: v1  # Use specific version tag
-    hooks:
-      - id: check-required-files
-      - id: check-pyproject-sections
-      - id: check-package-init
-      - id: check-cells-structure
-      - id: check-tech-structure
-      - id: check-pdk-object
-      - id: check-test-structure
-      - id: check-makefile-targets
-      - id: check-workflows
-      - id: check-multi-band
-      - id: check-no-raw-layers
-      - id: check-no-main-in-cells
-      - id: check-precommit-config
-      - id: check-version-sync
+**2. Set up pre-commit** — add to your `Makefile`:
+```makefile
+dev: install
+	curl -sf https://raw.githubusercontent.com/doplaydo/pdk-ci-workflow/main/templates/.pre-commit-config.yaml -o .pre-commit-config.yaml
+	uv run pre-commit install
 ```
 
-**3. Install pre-commit:**
-```bash
-pip install pre-commit
-pre-commit install
-```
+The canonical pre-commit config is fetched from this repo. It includes all PDK compliance hooks plus third-party tools (ruff, codespell, nbstripout, etc.) with centrally controlled versions. In CI, the `test_code.yml` workflow fetches it automatically.
+
+**3. Add `.pre-commit-config.yaml` to `.gitignore`** — the config is always fetched from upstream, never committed.
 
 ## Reusable Workflows
 
@@ -115,111 +96,33 @@ PDK repos reference these workflows via `workflow_call`. Create thin wrapper wor
 
 | Workflow | Jobs | Description |
 |----------|------|-------------|
-| `test_code.yml` | pre-commit, test_code, test_gfp | Linting (ruff), type checking (pyright), pytest, GFP validation |
+| `test_code.yml` | pre-commit, test_code, test_gfp | Pre-commit (canonical config), pytest, GFP validation |
 | `pages.yml` | build-docs, deploy-docs | Sphinx docs build and GitHub Pages deployment |
-| `claude-pr-review.yml` | claude-review | AI code review via Claude on PRs and `@claude` mentions |
+| `claude-pr-review.yml` | review | AI code review via Claude Sonnet 4 on PRs |
 | `release-drafter.yml` | update_release_draft | Auto-drafted release notes with semantic versioning |
+| `drc.yml` | drc | Design Rule Check with GFP and badge generation |
+| `issue.yml` | add-label | Auto-labels issues with "pdk" tag |
 
-### Usage Examples
-
-#### Testing
-Runs pre-commit checks, pytest, and GFP platform validation in parallel.
+All workflows are called from PDK repos using `secrets: inherit`:
 
 ```yaml
-# .github/workflows/test_code.yml
-name: Test code
-on:
-  pull_request:
-  push:
-    branches: [main]
-
 jobs:
   test:
-    uses: doplaydo/pdk-ci-workflow/.github/workflows/test_code.yml@v1
-    secrets:
-      GFP_API_KEY: ${{ secrets.GFP_API_KEY }}
+    uses: doplaydo/pdk-ci-workflow/.github/workflows/test_code.yml@main
+    secrets: inherit
 ```
 
-**Jobs:**
-- `pre-commit`: Runs ruff (linting/formatting) and pyright (type checking)
-- `test_code`: Runs pytest with Python 3.12 and uv package manager
-- `test_gfp`: Validates against GDSFactory Platform using `uv run gfp test`
+See `templates/.github/workflows/` for ready-to-copy wrappers for each workflow.
 
-**Required secrets:** `GFP_API_KEY`
+### Required Secrets
 
-#### Documentation
-Builds Sphinx documentation and deploys to GitHub Pages.
+PDK repos should have these secrets configured (passed automatically via `secrets: inherit`):
 
-```yaml
-# .github/workflows/pages.yml
-name: Build docs
-on:
-  pull_request:
-  push:
-    branches: [main]
-  workflow_dispatch:
-
-jobs:
-  docs:
-    uses: doplaydo/pdk-ci-workflow/.github/workflows/pages.yml@v1
-```
-
-**Jobs:**
-- `build-docs`: Runs `make docs` and uploads artifact
-- `deploy-docs`: Deploys to GitHub Pages (main branch only)
-
-**Required secrets:** None
-
-#### AI Code Review
-Enables Claude-powered code review on pull requests.
-
-```yaml
-# .github/workflows/claude-pr-review.yml
-name: Claude PR Review
-on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-  issue_comment:
-    types: [created]
-
-jobs:
-  review:
-    uses: doplaydo/pdk-ci-workflow/.github/workflows/claude-pr-review.yml@v1
-    secrets:
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-```
-
-**Features:**
-- Automatic review on PR creation and updates
-- Mention `@claude` in comments to request reviews
-- Uses Claude Sonnet 4 (claude-sonnet-4-20250514)
-- Reads Python files, notebooks, and documentation
-- Understands GDSFactory PDK context
-
-**Required secrets:** `ANTHROPIC_API_KEY`
-
-#### Release Drafter
-Automatically generates release notes with semantic versioning.
-
-```yaml
-# .github/workflows/release-drafter.yml
-name: Release Drafter
-on:
-  push:
-    branches: [main]
-
-jobs:
-  draft:
-    uses: doplaydo/pdk-ci-workflow/.github/workflows/release-drafter.yml@v1
-```
-
-**Features:**
-- Semantic versioning based on PR labels (major/minor/patch)
-- Auto-categorizes changes: Breaking, New, Bug Fixes, Maintenance, Docs, Dependencies
-- Auto-labels PRs based on branch patterns (feat/*, fix/*, etc.)
-- Excludes PRs labeled `skip-changelog`
-
-**Required secrets:** None (uses `GITHUB_TOKEN`)
+| Secret | Used by |
+|--------|---------|
+| `GFP_API_KEY` | test_code, pages, drc |
+| `ANTHROPIC_API_KEY` | claude-pr-review |
+| `GITHUB_TOKEN` | release-drafter, issue (automatic) |
 
 ## Pre-commit Hooks
 
@@ -227,25 +130,12 @@ Pre-commit hooks run locally before commits to enforce PDK structural standards.
 
 See [`hooks/README.md`](hooks/README.md) for detailed documentation of each hook.
 
-### Installation
+### Setup
 
-Add to your `.pre-commit-config.yaml` (or use the template from `templates/.pre-commit-config.yaml`):
+The canonical pre-commit config is managed centrally in `templates/.pre-commit-config.yaml`. It includes all PDK compliance hooks plus third-party tools (ruff, codespell, nbstripout, pretty-format-toml, etc.) with versions controlled via `additional_dependencies`.
 
-```yaml
-repos:
-  - repo: https://github.com/doplaydo/pdk-ci-workflow
-    rev: v1  # Use specific version tag
-    hooks:
-      - id: check-required-files
-      - id: check-pyproject-sections
-      # ... add hooks as needed
-```
-
-Then install:
-```bash
-pip install pre-commit
-pre-commit install
-```
+- **CI:** The `test_code.yml` workflow fetches the canonical config automatically.
+- **Local:** PDK repos download it via `make dev` (see Quick Start above).
 
 ### Available Hooks
 
@@ -284,17 +174,19 @@ pre-commit install
 
 ## Templates
 
-Reference configuration files are provided in `templates/` for onboarding new PDK repos. Copy these files into your repo and replace `{{VERSION}}` placeholders with the desired pdk-ci-workflow version tag (e.g., `v1`).
+Reference configuration files are provided in `templates/` for onboarding new PDK repos. Copy these files into your repo as-is — they use `@main` and `secrets: inherit`, no modification needed.
 
 ### Template Files
 
 | Template | Purpose |
 |----------|---------|
-| `.pre-commit-config.yaml` | Pre-commit hook config with all 14 PDK compliance hooks |
-| `.github/workflows/test_code.yml` | Thin wrapper calling reusable test workflow |
-| `.github/workflows/pages.yml` | Thin wrapper calling reusable docs workflow |
-| `.github/workflows/claude-pr-review.yml` | Thin wrapper for AI code review |
-| `.github/workflows/release-drafter.yml` | Thin wrapper for release management |
+| `.pre-commit-config.yaml` | Canonical pre-commit config (PDK hooks + third-party tools with centralized versions) |
+| `.github/workflows/test_code.yml` | Pre-commit, pytest, and GFP validation |
+| `.github/workflows/pages.yml` | Sphinx docs build and GitHub Pages deployment |
+| `.github/workflows/claude-pr-review.yml` | AI code review via Claude |
+| `.github/workflows/release-drafter.yml` | Semantic versioning and release notes |
+| `.github/workflows/drc.yml` | Design Rule Check via GFP |
+| `.github/workflows/issue.yml` | Auto-label PDK issues |
 | `.github/dependabot.yml` | Monthly pip and github-actions dependency updates |
 | `.github/release-drafter.yml` | Release note template with semantic versioning categories |
 
@@ -333,9 +225,9 @@ PDK repositories consuming these workflows need:
 
 ### GitHub Secrets
 
-For PDK repositories:
-- `GFP_API_KEY` - For GDSFactory Platform validation (`test_code.yml`)
-- `ANTHROPIC_API_KEY` - For Claude code reviews (`claude-pr-review.yml`)
+For PDK repositories (passed automatically via `secrets: inherit`):
+- `GFP_API_KEY` - For GDSFactory Platform validation (test_code, pages, drc)
+- `ANTHROPIC_API_KEY` - For Claude code reviews (claude-pr-review)
 
 ### GitHub Pages (for documentation)
 Enable GitHub Pages in your repository settings:
@@ -364,7 +256,7 @@ Enable GitHub Pages in your repository settings:
 ### Adding a New Template
 
 1. Create the template file in `templates/` mirroring the target path
-2. Use `{{VERSION}}` placeholder where the pdk-ci-workflow version tag should appear
+2. Use `@main` to reference pdk-ci-workflow and `secrets: inherit` to pass secrets
 
 ### Versioning
 
@@ -373,7 +265,7 @@ This repository uses semantic versioning:
 - **Minor (v1.1.0):** New workflows, hooks, or backward-compatible features
 - **Patch (v1.0.1):** Bug fixes, documentation updates
 
-Consuming repositories should pin to major version tags (e.g., `@v1`) to receive minor updates and patches automatically while avoiding breaking changes.
+PDK repositories currently reference `@main` for all workflows and pre-commit hooks.
 
 ## Repository Structure
 
@@ -385,7 +277,7 @@ pdk-ci-workflow/
 │   └── README.md
 ├── hooks/                  # Pre-commit hook implementations
 │   ├── _utils.py           # Shared utilities (TOML/YAML, AST, CheckResult)
-│   ├── check_*.py          # Individual hook scripts (15 total)
+│   ├── check_*.py          # Individual hook scripts (14 total)
 │   └── README.md
 ├── templates/              # Config templates synced to PDK repos
 │   ├── .pre-commit-config.yaml
@@ -395,7 +287,7 @@ pdk-ci-workflow/
 │   └── README.md
 ├── actions/                # Composite actions (in development)
 │   └── README.md
-├── .pre-commit-hooks.yml   # Hook registration for pre-commit framework
+├── .pre-commit-hooks.yaml  # Hook registration for pre-commit framework
 └── pyproject.toml          # Package config and hook entry points
 ```
 

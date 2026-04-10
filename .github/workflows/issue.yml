@@ -1,5 +1,6 @@
 name: Auto-label PDK issues
 on:
+  workflow_call:
   issues:
     types:
       - opened
