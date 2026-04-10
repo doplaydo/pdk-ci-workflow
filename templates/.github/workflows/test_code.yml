@@ -1,9 +1,4 @@
 name: Test code
-
-# CI pre-commit uses the canonical config from pdk-ci-workflow (fetched
-# automatically by the reusable workflow). No local .pre-commit-config.yaml
-# needed in CI.
-
 on:
   pull_request:
   push:
@@ -11,6 +6,5 @@ on:
 
 jobs:
   test:
-    uses: doplaydo/pdk-ci-workflow/.github/workflows/test_code.yml@{{VERSION}}
-    secrets:
-      GFP_API_KEY: ${{ secrets.GFP_API_KEY }}
+    uses: doplaydo/pdk-ci-workflow/.github/workflows/test_code.yml@main
+    secrets: inherit
