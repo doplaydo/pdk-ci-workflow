@@ -58,11 +58,10 @@ Pre-commit hooks run locally on developer machines before commits are created. T
 
 ## Quick Start
 
-### For consuming PDK repositories:
+### 1. Copy workflow templates
 
-The easiest way to onboard is to copy the template files provided in `templates/` into your repo.
+Copy all files from `templates/.github/workflows/` into your repo. Each is a one-liner that delegates to this repo:
 
-**1. Copy workflow templates** from `templates/.github/workflows/` into your repo. Each is a minimal wrapper:
 ```yaml
 # .github/workflows/test_code.yml
 name: Test code
@@ -77,16 +76,29 @@ jobs:
     secrets: inherit
 ```
 
-**2. Set up pre-commit** — add to your `Makefile`:
+### 2. Set up pre-commit
+
+Add to your `Makefile`:
 ```makefile
 dev: install
 	curl -sf https://raw.githubusercontent.com/doplaydo/pdk-ci-workflow/main/templates/.pre-commit-config.yaml -o .pre-commit-config.yaml
 	uv run pre-commit install
 ```
 
-The canonical pre-commit config is fetched from this repo. It includes all PDK compliance hooks plus third-party tools (ruff, codespell, nbstripout, etc.) with centrally controlled versions. In CI, the `test_code.yml` workflow fetches it automatically.
+Add to your `.gitignore`:
+```
+.pre-commit-config.yaml
+```
 
-**3. Add `.pre-commit-config.yaml` to `.gitignore`** — the config is always fetched from upstream, never committed.
+Then run `make dev`.
+
+### How pre-commit works
+
+- **The config is never committed to PDK repos.** It lives in this repo at `templates/.pre-commit-config.yaml` and is always fetched from upstream.
+- **In CI:** The `test_code.yml` reusable workflow fetches the canonical config automatically before running `pre-commit run --all-files`. No setup needed in the PDK repo.
+- **Locally:** `make dev` downloads the config and installs the git hooks. Pre-commit then runs automatically on every `git commit`.
+- **Versions of all tools** (ruff, codespell, nbstripout, pretty-format-toml, etc.) are controlled centrally in this repo via `additional_dependencies`. Bumping a version here propagates to all PDK repos — no downstream PRs needed.
+- **PDK-specific overrides** (e.g. custom `check-yaml` excludes): keep a committed `.pre-commit-config.yaml` instead, still referencing pdk-ci-workflow as the only repo.
 
 ## Reusable Workflows
 
@@ -126,16 +138,14 @@ PDK repos should have these secrets configured (passed automatically via `secret
 
 ## Pre-commit Hooks
 
-Pre-commit hooks run locally before commits to enforce PDK structural standards. All hooks are repo-level checks (`always_run: true`, `pass_filenames: false`) that use errors for required items and warnings for recommended items.
+Two types of hooks are defined in `.pre-commit-hooks.yaml`:
 
-See [`hooks/README.md`](hooks/README.md) for detailed documentation of each hook.
+- **14 PDK compliance hooks** (`hooks/*.py`) — validate repo structure, cells, tech, tests, etc.
+- **10 third-party wrapper hooks** — ruff, codespell, nbstripout, trailing-whitespace, etc. with versions pinned via `additional_dependencies` so they're controlled centrally
 
-### Setup
+All hooks use `always_run: true` and `pass_filenames: false` (repo-level checks). Errors = failure, warnings = pass but alert.
 
-The canonical pre-commit config is managed centrally in `templates/.pre-commit-config.yaml`. It includes all PDK compliance hooks plus third-party tools (ruff, codespell, nbstripout, pretty-format-toml, etc.) with versions controlled via `additional_dependencies`.
-
-- **CI:** The `test_code.yml` workflow fetches the canonical config automatically.
-- **Local:** PDK repos download it via `make dev` (see Quick Start above).
+See [`hooks/README.md`](hooks/README.md) for detailed documentation.
 
 ### Available Hooks
 
@@ -248,7 +258,7 @@ Enable GitHub Pages in your repository settings:
 
 1. Create Python script in `hooks/` directory
 2. Add entry point to `pyproject.toml` under `[project.scripts]`
-3. Register hook in `.pre-commit-hooks.yml` with unique ID
+3. Register hook in `.pre-commit-hooks.yaml` with unique ID
 4. Add the hook to `templates/.pre-commit-config.yaml`
 5. Document in `hooks/README.md`
 6. Test locally: `pre-commit try-repo . <hook-id> --verbose --all-files`
