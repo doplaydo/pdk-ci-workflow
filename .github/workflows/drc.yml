@@ -67,11 +67,6 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add badges/drc.svg
           if ! git diff --staged --quiet; then
-            branch="update-drc-badge"
-            git checkout -b "$branch"
-            git commit -m "update DRC badge"
-            git push -f origin "$branch"
-            gh pr create --title "update DRC badge" --body "Automated DRC badge update." --base main --head "$branch" || true
+            git commit -m "update DRC badge [skip ci]"
+            git push origin HEAD:main
           fi
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
