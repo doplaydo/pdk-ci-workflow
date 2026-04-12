@@ -46,6 +46,7 @@ jobs:
           name: difftest-report-test_code
           path: test_diffs/
           if-no-files-found: ignore
+          retention-days: 14
   test_gfp:
     runs-on: ubuntu-latest
     steps:
