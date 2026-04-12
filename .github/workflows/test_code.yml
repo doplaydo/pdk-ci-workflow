@@ -39,6 +39,15 @@ jobs:
           make install
       - name: Test with pytest
         run: make test
+      - name: Upload difftest artifacts
+        if: failure()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: difftest-report-test_code
+          path: |
+            tests/
+            build/
+          if-no-files-found: ignore
   test_gfp:
     runs-on: ubuntu-latest
     steps:
@@ -54,4 +63,13 @@ jobs:
           make install
       - name: Test with pytest
         run: uv run gfp test
+      - name: Upload difftest artifacts
+        if: failure()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: difftest-report-test_gfp
+          path: |
+            tests/
+            build/
+          if-no-files-found: ignore
         
