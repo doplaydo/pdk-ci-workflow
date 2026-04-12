@@ -68,4 +68,5 @@ jobs:
           name: difftest-report-test_gfp
           path: test_diffs/
           if-no-files-found: ignore
+          retention-days: 14
         
