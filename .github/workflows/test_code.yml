@@ -44,9 +44,7 @@ jobs:
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: difftest-report-test_code
-          path: |
-            tests/
-            build/
+          path: test_diffs/
           if-no-files-found: ignore
   test_gfp:
     runs-on: ubuntu-latest
@@ -68,8 +66,6 @@ jobs:
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: difftest-report-test_gfp
-          path: |
-            tests/
-            build/
+          path: test_diffs/
           if-no-files-found: ignore
         
