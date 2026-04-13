@@ -70,4 +70,3 @@ jobs:
           path: test_diffs/
           if-no-files-found: ignore
           retention-days: 14
-          if-no-files-found: ignore
