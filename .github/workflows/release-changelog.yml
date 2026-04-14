@@ -2,6 +2,13 @@ name: Release Changelog
 
 on:
   workflow_call:
+    inputs:
+      pr_number:
+        required: true
+        type: number
+      head_ref:
+        required: true
+        type: string
     secrets:
       ANTHROPIC_API_KEY:
         required: true
@@ -12,16 +19,22 @@ on:
 jobs:
   generate:
     name: Generate release notes
-    if: startsWith(github.head_ref, 'release/')
+    if: startsWith(inputs.head_ref || github.head_ref, 'bump-version')
     runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: read
     steps:
+      - name: Set refs
+        id: refs
+        run: |
+          echo "head_ref=${{ inputs.head_ref || github.head_ref }}" >> "$GITHUB_OUTPUT"
+          echo "pr_number=${{ inputs.pr_number || github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
+
       - name: Check if last commit is a changelog update
         id: check
         run: |
-          last_msg=$(gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/commits \
+          last_msg=$(gh api repos/${{ github.repository }}/pulls/${{ steps.refs.outputs.pr_number }}/commits \
             --jq '.[-1].commit.message')
           if [[ "$last_msg" == update\ changelog* ]]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
@@ -35,40 +48,63 @@ jobs:
         if: steps.check.outputs.skip == 'false'
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ github.head_ref }}
+          ref: ${{ steps.refs.outputs.head_ref }}
           fetch-depth: 0
 
-      - name: Extract version from branch name
+      - name: Extract and validate version
         if: steps.check.outputs.skip == 'false'
         id: version
         run: |
-          version="${{ github.head_ref }}"
-          version="${version#release/}"
+          head_ref="${{ steps.refs.outputs.head_ref }}"
+          version="${head_ref#bump-version-}"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([._-][a-zA-Z0-9._-]+)?$ ]]; then
+            echo "ERROR: Invalid version format: $version"
+            exit 1
+          fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch release draft body
+        if: steps.check.outputs.skip == 'false'
+        id: draft
+        run: |
+          body=$(gh api repos/${{ github.repository }}/releases \
+            --jq '[.[] | select(.draft)] | first | .body // ""')
+          # Pass via env file to avoid shell escaping issues
+          {
+            echo "body<<DRAFTEOF"
+            echo "$body"
+            echo "DRAFTEOF"
+          } >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       - name: Generate changelog with Claude
         if: steps.check.outputs.skip == 'false'
         run: |
           npm install -g @anthropic-ai/claude-code
 
-          claude --print --dangerously-skip-permissions "Update CHANGELOG.md for the upcoming release ${{ steps.version.outputs.version }}.
+          claude --print --dangerously-skip-permissions "Update CHANGELOG.md for the upcoming release.
+
+          The version is in env var RELEASE_VERSION.
+          The release-drafter output (raw PR list) is in env var DRAFT_BODY — use it as input.
 
           Instructions:
 
-          1. Find the last release tag:
-             git describe --tags --abbrev=0
+          1. Read DRAFT_BODY to understand what PRs are in this release.
+             If DRAFT_BODY is empty, fall back to manual discovery:
+             - Find last release tag: git describe --tags --abbrev=0
+             - Get merged PRs since that tag:
+               gh pr list --base main --state merged --search \"merged:>=\$(git log <last_tag> -1 --format=%aI | cut -dT -f1)\" --json number,title,labels --limit 100
+               (replace <last_tag> with actual tag from above)
 
-          2. Get merged PRs since that tag:
-             gh pr list --base main --state merged --search \"merged:>=\$(git log <last_tag> -1 --format=%aI | cut -dT -f1)\" --json number,title,labels --limit 100
-             (replace <last_tag> with the actual tag from step 1)
+          2. Update CHANGELOG.md:
+             - If CHANGELOG.md does not exist, create it with a top-level '# Changelog' heading.
+             - Add a new entry at the TOP (after heading, before existing entries).
+             - If the file contains a '<!-- towncrier release notes start -->' marker, insert BELOW it.
+             - Use this exact format:
 
-          3. Update CHANGELOG.md:
-             - If CHANGELOG.md does not exist, create it.
-             - Add a new entry at the TOP of the file, before any existing entries.
-             - Follow this exact format (agent-friendly: anchored headings, consistent structure):
-
-               <a id=\"${{ steps.version.outputs.version }}\"></a>
-               ## [${{ steps.version.outputs.version }}](https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.version }}) - $(date +%Y-%m-%d)
+               <a id=\"VERSION\"></a>
+               ## [VERSION](https://github.com/${{ github.repository }}/releases/tag/VERSION) - YYYY-MM-DD
 
                ### Breaking Changes
                - description [#number](https://github.com/${{ github.repository }}/pull/number)
@@ -82,17 +118,20 @@ jobs:
                ### Maintenance
                - description [#number](https://github.com/${{ github.repository }}/pull/number)
 
-               **Full Changelog**: https://github.com/${{ github.repository }}/compare/<last_tag>...${{ steps.version.outputs.version }}
+               **Full Changelog**: https://github.com/${{ github.repository }}/compare/<last_tag>...VERSION
 
-             - Categorize PRs by label: breaking → Breaking Changes, feature/enhancement → New Features, bug → Bug Fixes, rest → Maintenance.
+             - Replace VERSION with RELEASE_VERSION from env. Replace YYYY-MM-DD with today's date.
+             - Categorize by label or PR title: breaking → Breaking Changes, feature/enhancement → New Features, bug/fix → Bug Fixes, rest → Maintenance.
              - Omit empty sections entirely.
-             - Rewrite PR titles into clear user-facing sentences (imperative, lowercase first word).
-             - Do not duplicate entries already present for ${{ steps.version.outputs.version }}.
+             - Rewrite PR titles into clear, user-facing sentences (imperative, lowercase first word).
+             - Do not duplicate entries already present for this version.
 
-          4. Only modify CHANGELOG.md, nothing else."
+          3. Only modify CHANGELOG.md, nothing else."
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+          DRAFT_BODY: ${{ steps.draft.outputs.body }}
 
       - name: Commit changelog
         if: steps.check.outputs.skip == 'false'
@@ -107,21 +146,26 @@ jobs:
 
   check:
     name: Release notes present
-    if: startsWith(github.head_ref, 'release/')
+    if: startsWith(inputs.head_ref || github.head_ref, 'bump-version')
     runs-on: ubuntu-latest
     needs: generate
     permissions:
       contents: read
     steps:
+      - name: Set refs
+        id: refs
+        run: |
+          echo "head_ref=${{ inputs.head_ref || github.head_ref }}" >> "$GITHUB_OUTPUT"
+
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ github.head_ref }}
+          ref: ${{ steps.refs.outputs.head_ref }}
 
-      - name: Extract version from branch name
+      - name: Extract version
         id: version
         run: |
-          version="${{ github.head_ref }}"
-          version="${version#release/}"
+          head_ref="${{ steps.refs.outputs.head_ref }}"
+          version="${head_ref#bump-version-}"
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
       - name: Fail if release notes missing
