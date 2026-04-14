@@ -71,7 +71,7 @@ jobs:
 
           # --- Open Issues & PRs (via GitHub API) ---
           import subprocess
-          repo = os.environ.get("GITHUB_REPOSITORY", "doplaydo/intel")
+          repo = os.environ.get("GITHUB_REPOSITORY", "doplaydo/pdk-ci-workflow")
           try:
               r = subprocess.run(
                   ["gh", "api", f"search/issues?q=repo:{repo}+is:issue+is:open&per_page=1",
