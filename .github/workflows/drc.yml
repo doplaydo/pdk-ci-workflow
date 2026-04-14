@@ -63,15 +63,20 @@ jobs:
           </svg>
           SVGEOF
           sed -i "s/PLACEHOLDER/$errors/g; s/COLORPLACEHOLDER/$color/g" badges/drc.svg
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add badges/drc.svg
-          if ! git diff --staged --quiet; then
-            branch="update-drc-badge"
-            git checkout -b "$branch"
-            git commit -m "update DRC badge [skip ci]"
-            git push -f origin "$branch"
-            gh pr create --title "update DRC badge" --body "Automated DRC badge update." --base main --head "$branch" || true
-          fi
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+          tmp=$(mktemp -d)
+          cp badges/drc.svg "$tmp/"
+
+          git fetch origin badges 2>/dev/null && git checkout badges || {
+            git checkout --orphan badges
+            git rm -rf . 2>/dev/null || true
+          }
+
+          cp "$tmp"/drc.svg .
+          git add drc.svg
+          git diff --cached --quiet && echo "No DRC badge changes" && exit 0
+          git commit -m "Update DRC badge [skip ci]"
+          git push origin badges
