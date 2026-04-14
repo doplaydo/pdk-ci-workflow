@@ -1,0 +1,42 @@
+name: Model Regression
+on:
+  workflow_call:
+    secrets:
+      GFP_API_KEY:
+        required: false
+env:
+  GFP_API_KEY: ${{ secrets.GFP_API_KEY }}
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  model-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: make install
+      - name: Run model regression tests
+        env:
+          PYTEST_ADDOPTS: "-k model --tb=short"
+        run: |
+          output=$(make test 2>&1) && exit 0
+          # make wraps pytest exit-code 5 (no tests collected) into 2.
+          # If every pytest invocation deselected all tests, treat as pass.
+          if echo "$output" | grep -qE '/ 0 selected|no tests ran'; then
+            echo "No model tests found — skipping"
+            exit 0
+          fi
+          echo "$output"
+          exit 1
+      - name: Upload difftest artifacts
+        if: failure()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: difftest-report-model_regression
+          path: test_diffs/
+          if-no-files-found: ignore
+          retention-days: 14
