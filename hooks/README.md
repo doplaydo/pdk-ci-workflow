@@ -1,6 +1,6 @@
 # hooks/
 
-Pre-commit hook scripts for PDK template compliance. These are referenced by `.pre-commit-hooks.yml` at the repository root and executed by the [pre-commit](https://pre-commit.com/) framework when consuming repos point to this repository in their `.pre-commit-config.yaml`.
+Pre-commit hook scripts for PDK template compliance. These are referenced by `.pre-commit-hooks.yaml` at the repository root and executed by the [pre-commit](https://pre-commit.com/) framework when consuming repos point to this repository in their `.pre-commit-config.yaml`.
 
 Each hook is a self-contained Python script that validates some aspect of a PDK repository's structure and configuration. Hooks use **errors** for required items (fail the hook) and **warnings** for recommended items (print but pass).
 
@@ -32,7 +32,7 @@ Each hook is a self-contained Python script that validates some aspect of a PDK 
 | `check-test-structure` | `check_test_structure.py` | `tests/` directory exists with test files, GDS reference directories, `difftest()` calls, and `data_regression` usage |
 | `check-makefile-targets` | `check_makefile_targets.py` | Required targets: install, test. Recommended: docs, build, test-force, update-pre, dev. Content checks: uv sync in install, pytest in test |
 | `check-workflows` | `check_workflows.py` | `.github/workflows/` has test_code.yml (or test.yml) with pre-commit job and test job; recommends release.yml |
-| `check-precommit-config` | `check_precommit_config.py` | `.pre-commit-config.yaml` includes required hooks (end-of-file-fixer, trailing-whitespace, ruff, ruff-format) and recommended hooks (nbstripout, codespell) |
+| `check-precommit-config` | `check_precommit_config.py` | `.pre-commit-config.yaml` includes required hooks (end-of-file-fixer, trailing-whitespace, ruff or ruff-lint, ruff-format) and recommended hooks (nbstripout, codespell) |
 
 ### Multi-band
 
@@ -74,7 +74,7 @@ if __name__ == "__main__":
 ```
 
 - Entry points are registered in `pyproject.toml` under `[project.scripts]`
-- Hook metadata is registered in `.pre-commit-hooks.yml`
+- Hook metadata is registered in `.pre-commit-hooks.yaml` at repo root
 - All hooks use `always_run: true` and `pass_filenames: false` (repo-level structural checks)
 
 ## Adding a New Hook
@@ -84,7 +84,7 @@ if __name__ == "__main__":
    ```toml
    check_<name> = "hooks.check_<name>:main"
    ```
-3. Register in `.pre-commit-hooks.yml`:
+3. Register in `.pre-commit-hooks.yaml`:
    ```yaml
    - id: check-<name>
      name: <Human-readable name>

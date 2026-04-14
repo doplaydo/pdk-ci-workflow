@@ -1,42 +1,37 @@
 # templates/
 
-Reference configuration files for onboarding new PDK repositories. Copy these files into your PDK repo and replace `{{VERSION}}` placeholders with the desired pdk-ci-workflow version tag.
+Copy these files into your PDK repo as-is. No modification needed.
 
-## Template Files
+## Workflows
+
+Minimal wrappers — each just calls the upstream reusable workflow with `secrets: inherit`.
 
 | File | Purpose |
 |------|---------|
-| `.pre-commit-config.yaml` | Pre-commit hook config with all 15 PDK compliance hooks, plus standard hooks (ruff, pre-commit-hooks, pyright) |
-| `.github/workflows/test_code.yml` | Thin wrapper calling the reusable test workflow (pre-commit, pytest, GFP validation) |
-| `.github/workflows/pages.yml` | Thin wrapper calling the reusable docs build and GitHub Pages deployment workflow |
-| `.github/workflows/claude-pr-review.yml` | Thin wrapper for AI code review, passes `ANTHROPIC_API_KEY` secret |
-| `.github/workflows/release-drafter.yml` | Thin wrapper calling the reusable release drafter workflow |
-| `.github/dependabot.yml` | Dependabot config for monthly pip and github-actions dependency updates |
-| `.github/release-drafter.yml` | Release note template with semantic versioning categories and auto-labeler rules |
+| `.github/workflows/test_code.yml` | Pre-commit, pytest, GFP validation |
+| `.github/workflows/pages.yml` | Sphinx docs build + GitHub Pages |
+| `.github/workflows/claude-pr-review.yml` | AI code review via Claude |
+| `.github/workflows/release-drafter.yml` | Semantic versioning + release notes |
+| `.github/workflows/drc.yml` | Design Rule Check via GFP |
+| `.github/workflows/issue.yml` | Auto-label PDK issues |
 
-## Version Placeholder
+## Pre-commit Config
 
-All template files use `{{VERSION}}` as a placeholder where the pdk-ci-workflow version tag should appear. Replace this with the actual tag when copying:
+`.pre-commit-config.yaml` is the **canonical config** for all PDK repos.
 
-```yaml
-# In template:
-uses: doplaydo/pdk-ci-workflow/.github/workflows/test_code.yml@{{VERSION}}
+- **Do not commit this file** — add it to `.gitignore`
+- **CI fetches it automatically** via the `test_code.yml` workflow
+- **Locally**, `make dev` downloads it:
 
-# After replacement (e.g., tag v0.2.0):
-uses: doplaydo/pdk-ci-workflow/.github/workflows/test_code.yml@v0.2.0
+```makefile
+dev: install
+	curl -sf https://raw.githubusercontent.com/doplaydo/pdk-ci-workflow/main/templates/.pre-commit-config.yaml -o .pre-commit-config.yaml
+	uv run pre-commit install
 ```
 
-The `.pre-commit-config.yaml` template also uses the placeholder for the `rev:` field:
-```yaml
-- repo: https://github.com/doplaydo/pdk-ci-workflow
-  rev: "{{VERSION}}"
-```
+## Other Config
 
-## Adding a New Template
-
-1. Create the file under `templates/` mirroring its target path in the PDK repo. For example, `templates/.github/workflows/new-workflow.yml` will be copied to `.github/workflows/new-workflow.yml` in the PDK.
-2. Use `{{VERSION}}` wherever the pdk-ci-workflow version tag should appear.
-3. Test the replacement locally:
-   ```bash
-   sed 's/{{VERSION}}/v0.2.0/g' templates/.github/workflows/new-workflow.yml
-   ```
+| File | Purpose |
+|------|---------|
+| `.github/dependabot.yml` | Monthly pip + github-actions updates |
+| `.github/release-drafter.yml` | Release note categories + auto-labeler |
