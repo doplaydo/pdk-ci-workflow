@@ -26,7 +26,7 @@ jobs:
           output=$(make test 2>&1) && exit 0
           # make wraps pytest exit-code 5 (no tests collected) into 2.
           # If every pytest invocation deselected all tests, treat as pass.
-          if echo "$output" | grep -qE '/ 0 selected|no tests ran'; then
+          if echo "$output" | grep -qE '/ 0 selected|no tests ran|\[0 items\]'; then
             echo "No model tests found — skipping"
             exit 0
           fi
