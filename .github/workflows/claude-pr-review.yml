@@ -13,6 +13,7 @@ permissions:
   id-token: write
 jobs:
   review:
+    if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     permissions:
       contents: read
