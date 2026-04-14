@@ -27,6 +27,18 @@ jobs:
         run: uv sync --all-extras
       - name: Build cell
         run: uv run python build_cell.py all_cells
+        if: hashFiles('build_cell.py') != ''
+      - name: Build cell (inline)
+        if: hashFiles('build_cell.py') == ''
+        run: |
+          uv run python - << 'EOF'
+          from pathlib import Path
+          from gdsfactoryplus.core.pdk import get_pdk, register_cells
+          Path("build/gds").mkdir(parents=True, exist_ok=True)
+          register_cells()
+          c = get_pdk().cells["all_cells"]()
+          c.write_gds("build/gds/all_cells.gds")
+          EOF
       - name: Run DRC
         run: |
           mkdir -p build/lyrdb
