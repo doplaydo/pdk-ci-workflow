@@ -29,21 +29,17 @@ jobs:
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}
 
-            Please review this pull request with a focus on:
-            - Code quality and best practices
-            - Potential bugs or issues
-            - Security implications
-            - Performance considerations
+            Review this PR. Focus: bugs, security, correctness. Skip style unless broken.
 
-            Note: The PR branch is already checked out in the current working directory.
-
-            Note the following guidelines for your review:
-            - Do not write positive feedback or general comments. Only provide constructive criticism and actionable feedback. If there are no issues, no need to comment.
-            - Get familiar with the codebase by reading ./AGENTS.md in the repo root.
-            - You are called on new commits to the PR, so focus on the latest changes and how they integrate with the existing code. Avoid redundant comments on unchanged code.
+            Rules:
+            - Read ./AGENTS.md first.
+            - Only new changes matter. No comments on unchanged code.
+            - No positive feedback. No summaries. No pleasantries.
+            - If no issues: post nothing.
+            - Each issue = one line: `[file:line] problem. fix.`
 
             Use `gh pr comment` for top-level feedback.
-            Use `mcp__github_inline_comment__create_inline_comment` to highlight specific code issues.
+            Use `mcp__github_inline_comment__create_inline_comment` for inline issues.
             Only post GitHub comments - don't submit review text as messages.
           claude_args: |
             --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
