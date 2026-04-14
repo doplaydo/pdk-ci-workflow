@@ -7,5 +7,6 @@ on:
 
 jobs:
   docs:
+    if: github.actor != 'dependabot[bot]'
     uses: doplaydo/pdk-ci-workflow/.github/workflows/pages.yml@main
     secrets: inherit
