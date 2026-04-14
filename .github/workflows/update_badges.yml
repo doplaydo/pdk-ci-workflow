@@ -1,0 +1,116 @@
+name: Update Badges
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+permissions:
+  contents: write
+  issues: read
+  pull-requests: read
+jobs:
+  badges:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+      - run: make install
+
+      - name: Compute test coverage
+        run: make test
+        continue-on-error: true
+        env:
+          GFP_API_KEY: ${{ secrets.GFP_API_KEY }}
+          PYTEST_ADDOPTS: "--cov=intel --cov-report=xml --cov-append -q"
+
+      - name: Generate all badges
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GFP_API_KEY: ${{ secrets.GFP_API_KEY }}
+        run: |
+          mkdir -p badges
+          uv run python - <<'PYEOF'
+          import importlib, json, os, urllib.request, xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          def make_badge(label, value, color, filename):
+              """Download a shields.io badge SVG."""
+              safe_val = str(value).replace("-", "--").replace(" ", "_")
+              safe_label = label.replace("-", "--").replace(" ", "_")
+              url = f"https://img.shields.io/badge/{safe_label}-{safe_val}-{color}"
+              Path(f"badges/{filename}").write_bytes(urllib.request.urlopen(url).read())
+              print(f"  {filename}: {label} = {value}")
+
+          # --- Test Coverage ---
+          try:
+              tree = ET.parse("coverage.xml")
+              rate = float(tree.getroot().attrib.get("line-rate", 0)) * 100
+          except Exception:
+              rate = 0
+          pct = f"{rate:.0f}%25"
+          color = "brightgreen" if rate >= 80 else ("yellow" if rate >= 60 else "red")
+          make_badge("coverage", pct, color, "coverage.svg")
+
+          # --- Model Coverage ---
+          try:
+              mod = importlib.import_module("intel")
+              pdk = mod.PDK
+              pdk.activate()
+              cells = pdk.cells
+              models = getattr(pdk, "models", {}) or {}
+              total = len(cells)
+              with_model = len(set(cells) & set(models))
+              model_pct = (with_model / total * 100) if total else 0
+          except Exception as e:
+              print(f"  model coverage error: {e}")
+              total, with_model, model_pct = 0, 0, 0
+          pct_str = f"{model_pct:.0f}%25"
+          color = "brightgreen" if model_pct >= 80 else ("yellow" if model_pct >= 40 else "red")
+          make_badge("models", pct_str, color, "model_coverage.svg")
+
+          # --- Open Issues & PRs (via GitHub API) ---
+          import subprocess
+          repo = os.environ.get("GITHUB_REPOSITORY", "doplaydo/intel")
+          try:
+              r = subprocess.run(
+                  ["gh", "api", f"search/issues?q=repo:{repo}+is:issue+is:open&per_page=1",
+                   "--jq", ".total_count"],
+                  capture_output=True, text=True, check=True
+              )
+              open_issues = int(r.stdout.strip())
+          except Exception:
+              open_issues = 0
+          try:
+              r = subprocess.run(
+                  ["gh", "api", f"search/issues?q=repo:{repo}+is:pr+is:open&per_page=1",
+                   "--jq", ".total_count"],
+                  capture_output=True, text=True, check=True
+              )
+              open_prs = int(r.stdout.strip())
+          except Exception:
+              open_prs = 0
+          color_issues = "brightgreen" if open_issues == 0 else ("yellow" if open_issues < 10 else "red")
+          color_prs = "brightgreen" if open_prs == 0 else ("yellow" if open_prs < 10 else "red")
+          make_badge("issues", str(open_issues), color_issues, "issues.svg")
+          make_badge("PRs", str(open_prs), color_prs, "prs.svg")
+          PYEOF
+
+      - name: Push badges to badges branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          tmp=$(mktemp -d)
+          cp badges/*.svg "$tmp/"
+
+          git fetch origin badges 2>/dev/null && git checkout badges || {
+            git checkout --orphan badges
+            git rm -rf . 2>/dev/null || true
+          }
+
+          cp "$tmp"/*.svg .
+          git add *.svg
+          git diff --cached --quiet && echo "No badge changes" && exit 0
+          git commit -m "Update metric badges [skip ci]"
+          git push origin badges
