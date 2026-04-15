@@ -84,4 +84,11 @@ jobs:
           git add drc.svg
           git diff --cached --quiet && echo "No DRC badge changes" && exit 0
           git commit -m "Update DRC badge [skip ci]"
-          git push origin badges
+
+          # Retry push with rebase in case another workflow updated badges concurrently
+          for i in 1 2 3; do
+            git push origin badges && break
+            echo "Push failed (attempt $i), rebasing..."
+            git fetch origin badges
+            git rebase origin/badges
+          done
