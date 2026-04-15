@@ -16,7 +16,7 @@ from pathlib import Path
 
 import yaml
 
-from hooks._utils import CheckResult
+from hooks._utils import CheckResult, load_toml
 
 # Paths (relative to PDK repo root) that must match the upstream template of
 # the same relative path under `templates/` in pdk-ci-workflow.
@@ -59,11 +59,12 @@ def _diff(old: str, new: str, path: str) -> str:
 def _is_self_repo() -> bool:
     """Skip when running inside pdk-ci-workflow itself.
 
-    The canonical templates live at `templates/.github/` in this repo,
-    and `.github/` holds the REUSABLE source workflows (not thin callers).
-    Enforcing thin-caller content over source workflows would be destructive.
+    This repo's `.github/` holds REUSABLE source workflows (not thin callers),
+    so enforcing template content would clobber them. Identified by
+    `pyproject.toml` project name.
     """
-    return Path("templates/.github/dependabot.yml").is_file()
+    data = load_toml("pyproject.toml")
+    return bool(data and data.get("project", {}).get("name") == "ci-pdk-workflows")
 
 
 def main() -> int:
@@ -87,13 +88,13 @@ def main() -> int:
             result.warn(f"no canonical template shipped for {rel}")
             continue
 
-        src_text = src.read_text()
-        local_text = local.read_text()
+        src_text = src.read_text(encoding="utf-8")
+        local_text = local.read_text(encoding="utf-8")
 
         if _yaml_equal(src_text, local_text):
             continue
 
-        local.write_text(src_text)
+        local.write_text(src_text, encoding="utf-8")
         print(_diff(local_text, src_text, rel))
         result.error(f"rewrote {rel} from upstream template")
 
