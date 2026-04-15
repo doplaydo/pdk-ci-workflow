@@ -14,8 +14,6 @@ import sys
 from importlib.resources import files
 from pathlib import Path
 
-import yaml
-
 from hooks._utils import CheckResult, load_toml
 
 # Paths (relative to PDK repo root) that must match the upstream template of
@@ -34,15 +32,6 @@ TEMPLATES: list[str] = [
     ".github/workflows/test_coverage.yml",
     ".github/workflows/update_badges.yml",
 ]
-
-
-def _yaml_equal(a: str, b: str) -> bool:
-    """Semantic YAML equality — ignores whitespace, quote-style, key order.
-
-    Raises yaml.YAMLError if either input fails to parse; caller decides how
-    to handle the fallback so it's never silent.
-    """
-    return yaml.safe_load(a) == yaml.safe_load(b)
 
 
 def _diff(old: str, new: str, path: str) -> str:
@@ -92,16 +81,8 @@ def main() -> int:
         src_text = src.read_text(encoding="utf-8")
         local_text = local.read_text(encoding="utf-8")
 
-        try:
-            if _yaml_equal(src_text, local_text):
-                continue
-        except yaml.YAMLError as e:
-            result.warn(
-                f"{rel}: YAML parse failed ({e}); falling back to string "
-                "equality — whitespace/comment-only differences may trigger rewrite"
-            )
-            if src_text == local_text:
-                continue
+        if src_text == local_text:
+            continue
 
         local.write_text(src_text, encoding="utf-8")
         print(_diff(local_text, src_text, rel))
