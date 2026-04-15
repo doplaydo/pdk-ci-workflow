@@ -146,20 +146,25 @@ jobs:
           tmp=$(mktemp -d)
           cp badges/*.svg "$tmp/"
 
-          # Clean working tree so branch checkout succeeds
-          git clean -fdx
+          # Clean untracked files so branch checkout succeeds
+          git clean -fd
           git checkout -f .
 
-          git fetch origin badges 2>/dev/null
-          if git rev-parse --verify origin/badges >/dev/null 2>&1; then
-            git checkout -f -B badges origin/badges
-          else
-            git checkout --orphan badges
-            git rm -rf . 2>/dev/null || true
-          fi
+          for attempt in 1 2 3; do
+            git fetch origin badges 2>/dev/null
+            if git rev-parse --verify origin/badges >/dev/null 2>&1; then
+              git checkout -f -B badges origin/badges
+            else
+              git checkout --orphan badges
+              git rm -rf . 2>/dev/null || true
+            fi
 
-          cp "$tmp"/*.svg .
-          git add *.svg
-          git diff --cached --quiet && echo "No badge changes" && exit 0
-          git commit -m "Update metric badges [skip ci]"
-          git push origin badges
+            cp "$tmp"/*.svg .
+            git add *.svg
+            git diff --cached --quiet && echo "No badge changes" && exit 0
+            git commit -m "Update metric badges [skip ci]"
+            git push origin badges && exit 0
+            echo "Push failed (attempt $attempt), retrying..."
+            sleep 5
+          done
+          echo "All push attempts failed" && exit 1
