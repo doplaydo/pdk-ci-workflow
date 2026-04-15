@@ -46,7 +46,7 @@ jobs:
           name: difftest-report-test_code
           path: test_diffs/
           if-no-files-found: ignore
-          retention-days: 14
+          retention-days: 1
   test_gfp:
     runs-on: ubuntu-latest
     steps:
@@ -69,4 +69,4 @@ jobs:
           name: difftest-report-test_gfp
           path: test_diffs/
           if-no-files-found: ignore
-          retention-days: 14
+          retention-days: 1
