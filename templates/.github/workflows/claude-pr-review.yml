@@ -7,6 +7,5 @@ on:
 
 jobs:
   review:
-    if: github.actor != 'dependabot[bot]'
     uses: doplaydo/pdk-ci-workflow/.github/workflows/claude-pr-review.yml@main
     secrets: inherit
