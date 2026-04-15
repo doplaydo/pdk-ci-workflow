@@ -44,7 +44,8 @@ jobs:
 
             Output format — ultra-terse, one line per issue:
             - Drop articles (a/an/the), filler words, pleasantries, and preamble.
-            - Each issue: `[file:line] problem. fix.`
+            - Prefix each issue with a severity marker: 🔴 bug that should be fixed before merging · 🟡 minor issue, worth fixing but not blocking · 🟣 bug in codebase not introduced by this PR.
+            - Each issue: `🔴/🟡/🟣 [file:line] problem. fix.`
             - No summaries. No "Overall, ...". No positive remarks.
 
             Use `gh pr comment` for top-level feedback.
