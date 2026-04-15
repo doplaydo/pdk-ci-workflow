@@ -75,20 +75,20 @@ jobs:
           tmp=$(mktemp -d)
           cp badges/drc.svg "$tmp/"
 
-          git fetch origin badges 2>/dev/null && git checkout badges || {
+          # Clean working tree so branch checkout succeeds
+          git clean -fdx
+          git checkout -f .
+
+          git fetch origin badges 2>/dev/null
+          if git rev-parse --verify origin/badges >/dev/null 2>&1; then
+            git checkout -f -B badges origin/badges
+          else
             git checkout --orphan badges
             git rm -rf . 2>/dev/null || true
-          }
+          fi
 
           cp "$tmp"/drc.svg .
           git add drc.svg
           git diff --cached --quiet && echo "No DRC badge changes" && exit 0
           git commit -m "Update DRC badge [skip ci]"
-
-          # Retry push with rebase in case another workflow updated badges concurrently
-          for i in 1 2 3; do
-            git push origin badges && break
-            echo "Push failed (attempt $i), rebasing..."
-            git fetch origin badges
-            git rebase origin/badges
-          done
+          git push origin badges
