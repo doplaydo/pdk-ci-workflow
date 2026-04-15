@@ -24,6 +24,7 @@ check_no_raw_layers = "hooks.check_no_raw_layers:main"
 check_no_main_in_cells = "hooks.check_no_main_in_cells:main"
 check_precommit_config = "hooks.check_precommit_config:main"
 check_version_sync = "hooks.check_version_sync:main"
+check_template_drift = "hooks.check_template_drift:main"
 
 [build-system]
 requires = ["setuptools>=68.0"]
@@ -31,4 +32,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["hooks*"]
+include = ["hooks*", "templates*"]
+
+[tool.setuptools.package-data]
+"templates" = [".github/**/*"]

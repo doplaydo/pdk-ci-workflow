@@ -144,6 +144,17 @@
     Checks version strings match across pyproject.toml [project].version,
     [tool.tbump.version].current, __init__.py __version__, and README.md.
 
+- id: check-template-drift
+  name: Check .github template drift
+  entry: check_template_drift
+  language: python
+  always_run: true
+  pass_filenames: false
+  description: >
+    Enforces PDK repo .github/ files match the canonical templates in
+    pdk-ci-workflow. Ruff-style auto-fix: on drift, rewrites local file
+    from template and exits 1; second run exits 0.
+
 # =============================================================================
 # Third-party wrapper hooks
 #
