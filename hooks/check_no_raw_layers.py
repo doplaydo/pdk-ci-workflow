@@ -93,8 +93,12 @@ class RawLayerTupleFinder(ast.NodeVisitor):
     def _is_layer_context(self) -> bool:
         """Return True if the current kwarg context looks like a layer argument."""
         if self._kwarg_name is None:
-            # Not inside a keyword argument at all — flag conservatively.
-            return True
+            # Not inside a keyword argument — could be a coordinate tuple
+            # (e.g. `c.center = (0, 0)`, `inst.move((0, 0))`), a size, or some
+            # other non-layer value. Only flag tuples that appear in an
+            # explicit layer kwarg; positional/attribute-assignment contexts
+            # are too ambiguous to flag reliably.
+            return False
         kwarg = self._kwarg_name
         return (
             kwarg in _LAYER_KWARG_NAMES
