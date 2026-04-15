@@ -5,6 +5,9 @@ on:
       - main
   workflow_dispatch:
   workflow_call:
+    secrets:
+      ANTHROPIC_API_KEY:
+        required: false
 permissions:
   contents: read
 jobs:
@@ -14,7 +17,33 @@ jobs:
       pull-requests: write
     runs-on: ubuntu-latest
     steps:
-      # Drafts your next Release notes as Pull Requests are merged into "master"
       - uses: release-drafter/release-drafter@139054aeaa9adc52ab36ddf67437541f039b88e2 # v7.1.1
+        id: drafter
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Curate release notes with Claude
+        if: steps.drafter.outputs.body != '' && (secrets.ANTHROPIC_API_KEY != '')
+        run: |
+          npm install -g @anthropic-ai/claude-code
+
+          curated=$(claude --print --dangerously-skip-permissions "Rewrite the release notes below into polished, user-facing changelog entries.
+
+          Rules:
+          - Keep the same markdown structure (headings, bullet lists, PR links).
+          - Rewrite each bullet into a clear, imperative sentence (e.g. 'fix port type for EdgeCoupler' not 'Fix port type for EdgeCoupler component to resolve issue').
+          - Drop internal/CI-only items (dependency bumps, CI config changes) into a collapsed details block at the end.
+          - Omit empty sections.
+          - Output ONLY the rewritten markdown, nothing else.
+
+          Raw release notes:
+          \$DRAFT_BODY")
+
+          if [ -n "$curated" ]; then
+            gh release edit "$TAG_NAME" --notes "$curated"
+          fi
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ github.token }}
+          DRAFT_BODY: ${{ steps.drafter.outputs.body }}
+          TAG_NAME: ${{ steps.drafter.outputs.tag_name }}

@@ -7,3 +7,4 @@ on:
 jobs:
   draft:
     uses: doplaydo/pdk-ci-workflow/.github/workflows/release-drafter.yml@main
+    secrets: inherit
