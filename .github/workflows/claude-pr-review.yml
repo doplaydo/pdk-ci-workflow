@@ -44,7 +44,7 @@ jobs:
 
             Output format — ultra-terse, one line per issue:
             - Drop articles (a/an/the), filler words, pleasantries, and preamble.
-            - Prefix each issue with a severity marker: 🔴 blocking bug introduced by this PR · 🟡 nit/non-blocking · 🟣 pre-existing issue not introduced by this PR.
+            - Prefix each issue with a severity marker: 🔴 bug that should be fixed before merging · 🟡 minor issue, worth fixing but not blocking · 🟣 bug in codebase not introduced by this PR.
             - Each issue: `🔴/🟡/🟣 [file:line] problem. fix.`
             - No summaries. No "Overall, ...". No positive remarks.
 
