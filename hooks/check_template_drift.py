@@ -37,11 +37,12 @@ TEMPLATES: list[str] = [
 
 
 def _yaml_equal(a: str, b: str) -> bool:
-    """Semantic YAML equality — ignores whitespace, quote-style, key order."""
-    try:
-        return yaml.safe_load(a) == yaml.safe_load(b)
-    except yaml.YAMLError:
-        return a == b
+    """Semantic YAML equality — ignores whitespace, quote-style, key order.
+
+    Raises yaml.YAMLError if either input fails to parse; caller decides how
+    to handle the fallback so it's never silent.
+    """
+    return yaml.safe_load(a) == yaml.safe_load(b)
 
 
 def _diff(old: str, new: str, path: str) -> str:
@@ -85,14 +86,22 @@ def main() -> int:
         for p in parts:
             src = src.joinpath(p)
         if not src.is_file():
-            result.warn(f"no canonical template shipped for {rel}")
+            result.error(f"no canonical template shipped for {rel}")
             continue
 
         src_text = src.read_text(encoding="utf-8")
         local_text = local.read_text(encoding="utf-8")
 
-        if _yaml_equal(src_text, local_text):
-            continue
+        try:
+            if _yaml_equal(src_text, local_text):
+                continue
+        except yaml.YAMLError as e:
+            result.warn(
+                f"{rel}: YAML parse failed ({e}); falling back to string "
+                "equality — whitespace/comment-only differences may trigger rewrite"
+            )
+            if src_text == local_text:
+                continue
 
         local.write_text(src_text, encoding="utf-8")
         print(_diff(local_text, src_text, rel))
