@@ -29,6 +29,7 @@ repos:
       - id: check-no-raw-layers
       - id: check-no-main-in-cells
       - id: check-precommit-config
+      - id: check-template-drift
       # Code quality (versions controlled by pdk-ci-workflow)
       - id: trailing-whitespace
       - id: end-of-file-fixer

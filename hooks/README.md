@@ -4,7 +4,7 @@ Pre-commit hook scripts for PDK template compliance. These are referenced by `.p
 
 Each hook is a self-contained Python script that validates some aspect of a PDK repository's structure and configuration. Hooks use **errors** for required items (fail the hook) and **warnings** for recommended items (print but pass).
 
-## Available Hooks (14)
+## Available Hooks (15)
 
 ### Project Structure
 
@@ -33,6 +33,7 @@ Each hook is a self-contained Python script that validates some aspect of a PDK 
 | `check-makefile-targets` | `check_makefile_targets.py` | Required targets: install, test. Recommended: docs, build, test-force, update-pre, dev. Content checks: uv sync in install, pytest in test |
 | `check-workflows` | `check_workflows.py` | `.github/workflows/` has test_code.yml (or test.yml) with pre-commit job and test job; recommends release.yml |
 | `check-precommit-config` | `check_precommit_config.py` | `.pre-commit-config.yaml` includes required hooks (end-of-file-fixer, trailing-whitespace, ruff or ruff-lint, ruff-format) and recommended hooks (nbstripout, codespell) |
+| `check-template-drift` | `check_template_drift.py` | Enforces `.github/dependabot.yml`, `.github/release-drafter.yml`, and `.github/workflows/*.yml` thin callers match upstream `templates/`. Ruff-style auto-fix: drift → rewrite + exit 1, re-run → exit 0. Skips missing files (sync only, no create). No-ops inside pdk-ci-workflow itself. |
 
 ### Multi-band
 

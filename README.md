@@ -12,7 +12,7 @@ This repository provides reusable automation tooling for Process Design Kit (PDK
 - Standardized testing, linting, and type checking across all PDKs
 - Automated documentation builds and deployments
 - AI-powered code reviews via Claude
-- 14 pre-commit hooks enforcing PDK structural compliance
+- 15 pre-commit hooks enforcing PDK structural compliance
 - Semantic versioning and automated release notes
 - Template files for onboarding new PDK repos
 
@@ -21,7 +21,7 @@ This repository provides reusable automation tooling for Process Design Kit (PDK
 This repository provides four complementary automation patterns:
 
 - **Reusable GitHub Actions Workflows** - Complete CI/CD jobs for testing, docs, releases, and code review
-- **Pre-commit Hooks** - 14 PDK compliance checks plus 10 third-party tool wrappers (ruff, codespell, etc.) with centrally controlled versions
+- **Pre-commit Hooks** - 15 PDK compliance checks plus 10 third-party tool wrappers (ruff, codespell, etc.) with centrally controlled versions
 - **Templates** - Reference configuration files for onboarding new PDK repos
 - **Composite Actions** - Shared step sequences for flexible workflow composition (in development)
 
@@ -140,7 +140,7 @@ PDK repos should have these secrets configured (passed automatically via `secret
 
 Two types of hooks are defined in `.pre-commit-hooks.yaml`:
 
-- **14 PDK compliance hooks** (`hooks/*.py`) — validate repo structure, cells, tech, tests, etc.
+- **15 PDK compliance hooks** (`hooks/*.py`) — validate repo structure, cells, tech, tests, etc.
 - **10 third-party wrapper hooks** — ruff, codespell, nbstripout, trailing-whitespace, etc. with versions pinned via `additional_dependencies` so they're controlled centrally
 
 All hooks use `always_run: true` and `pass_filenames: false` (repo-level checks). Errors = failure, warnings = pass but alert.
@@ -175,6 +175,7 @@ See [`hooks/README.md`](hooks/README.md) for detailed documentation.
 | `check-makefile-targets` | Required targets (install, test) and recommended targets (docs, build, test-force, update-pre, dev) |
 | `check-workflows` | `.github/workflows/` has test_code.yml with pre-commit and test jobs |
 | `check-precommit-config` | `.pre-commit-config.yaml` includes required hooks (trailing-whitespace, end-of-file-fixer, ruff or ruff-lint, ruff-format) |
+| `check-template-drift` | `.github/dependabot.yml`, `.github/release-drafter.yml`, and `.github/workflows/*.yml` thin callers match upstream templates. Auto-fixes drift. |
 
 #### Multi-band
 
@@ -285,7 +286,7 @@ pdk-ci-workflow/
 │   └── README.md
 ├── hooks/                  # Pre-commit hook implementations
 │   ├── _utils.py           # Shared utilities (TOML/YAML, AST, CheckResult)
-│   ├── check_*.py          # Individual hook scripts (14 total)
+│   ├── check_*.py          # Individual hook scripts (15 total)
 │   └── README.md
 ├── templates/              # Config templates synced to PDK repos
 │   ├── .pre-commit-config.yaml
