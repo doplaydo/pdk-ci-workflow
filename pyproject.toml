@@ -26,6 +26,12 @@ check_precommit_config = "hooks.check_precommit_config:main"
 check_version_sync = "hooks.check_version_sync:main"
 check_template_drift = "hooks.check_template_drift:main"
 
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0",
+    "hypothesis>=6.0",
+]
+
 [build-system]
 requires = ["setuptools>=68.0"]
 build-backend = "setuptools.build_meta"
