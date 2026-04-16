@@ -3,7 +3,7 @@ on:
   workflow_call:
     secrets:
       ANTHROPIC_API_KEY:
-        required: false
+        required: true
   pull_request:
     types: [opened, synchronize, reopened]
 permissions:
