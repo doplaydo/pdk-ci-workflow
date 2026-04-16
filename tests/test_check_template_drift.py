@@ -20,38 +20,39 @@ class TestCheckTemplateDrift:
         (pdk_root / "pyproject.toml").write_text(content)
         assert main() == 0
 
-    def test_no_local_files_passes(self, pdk_root: Path) -> None:
-        """If none of the template files exist locally, hook passes."""
+    def test_no_local_files_fails_and_creates_them(self, pdk_root: Path) -> None:
+        """If none of the template files exist locally, hook fails and creates them."""
         # Remove all .github files
         import shutil
 
-        shutil.rmtree(pdk_root / ".github")
-        assert main() == 0
+        if (pdk_root / ".github").exists():
+            shutil.rmtree(pdk_root / ".github")
+        
+        # Should fail because it creates them
+        assert main() == 1
+        
+        # Verify at least one was created
+        from hooks.check_template_drift import TEMPLATES
+        assert (pdk_root / TEMPLATES[0]).exists()
 
     def test_matching_template_passes(self, pdk_root: Path) -> None:
         """If local file matches the template exactly, hook passes."""
-        # We need to check if there's a template file that matches
-        # The hook reads templates from importlib.resources
-        # If the local file matches the shipped template, it should pass
-        # Since our test repo files won't match the real templates,
-        # let's mock the template content to match the local content
         from importlib.resources import files
+        from hooks.check_template_drift import TEMPLATES
 
         root = files("templates")
 
-        # For each template file that exists locally, write its content
-        from hooks.check_template_drift import TEMPLATES
-
+        # Ensure ALL template files exist locally and match the template
         for rel in TEMPLATES:
             local = pdk_root / rel
-            if not local.exists():
-                continue
+            local.parent.mkdir(parents=True, exist_ok=True)
+            
             parts = rel.split("/")
             src = root
             for p in parts:
                 src = src.joinpath(p)
+            
             if src.is_file():
-                # Write template content to local file
                 local.write_text(src.read_text(encoding="utf-8"))
 
         assert main() == 0
@@ -59,7 +60,6 @@ class TestCheckTemplateDrift:
     def test_drifted_file_gets_rewritten(self, pdk_root: Path) -> None:
         """A drifted file should be rewritten and hook should return 1."""
         from importlib.resources import files
-
         from hooks.check_template_drift import TEMPLATES
 
         root = files("templates")
@@ -76,6 +76,8 @@ class TestCheckTemplateDrift:
                 local.parent.mkdir(parents=True, exist_ok=True)
                 local.write_text("# this content is different\n")
 
+                # Note: other files in TEMPLATES might still be missing in pdk_root
+                # and would also cause failure. But that's fine, result should be 1.
                 result = main()
                 assert result == 1
                 # After rewrite, local file should match template
@@ -87,25 +89,17 @@ class TestCheckTemplateDrift:
     def test_second_run_after_rewrite_passes(self, pdk_root: Path) -> None:
         """After rewriting, a second run should pass (Ruff-style auto-fix)."""
         from importlib.resources import files
-
         from hooks.check_template_drift import TEMPLATES
 
         root = files("templates")
-
+        
+        # To ensure the second run passes, we must handle ALL templates
         for rel in TEMPLATES:
-            parts = rel.split("/")
-            src = root
-            for p in parts:
-                src = src.joinpath(p)
-            if src.is_file():
-                local = pdk_root / rel
-                local.parent.mkdir(parents=True, exist_ok=True)
-                local.write_text("# drifted content\n")
+            local = pdk_root / rel
+            local.parent.mkdir(parents=True, exist_ok=True)
+            local.write_text("# drifted content\n")
 
-                # First run: rewrite
-                assert main() == 1
-                # Second run: should pass
-                assert main() == 0
-                return
-
-        pytest.skip("No template files found in package")
+        # First run: rewrite (should return 1 because many files are "fixed")
+        assert main() == 1
+        # Second run: should pass (all match now)
+        assert main() == 0
