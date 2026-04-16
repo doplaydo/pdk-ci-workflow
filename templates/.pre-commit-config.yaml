@@ -12,7 +12,7 @@
 
 repos:
   - repo: https://github.com/doplaydo/pdk-ci-workflow
-    rev: main
+    rev: 4c8efcfae3b16f3ab11cb3a18f0d241528e824c6
     hooks:
       # PDK structure validation
       - id: check-required-files
