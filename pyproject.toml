@@ -27,7 +27,7 @@ check_version_sync = "hooks.check_version_sync:main"
 check_template_drift = "hooks.check_template_drift:main"
 
 [dependency-groups]
-test = [
+dev = [
     "pytest>=7.0",
     "hypothesis>=6.0",
 ]
