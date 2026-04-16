@@ -4,6 +4,8 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: monthly
+    ignore:
+      - dependency-name: "jupyter-book"
 
   - package-ecosystem: github-actions
     cooldown:
