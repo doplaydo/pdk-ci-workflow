@@ -7,5 +7,4 @@ on:
 jobs:
   drc:
     uses: doplaydo/pdk-ci-workflow/.github/workflows/drc.yml@main
-    secrets:
-      GFP_API_KEY: ${{ secrets.GFP_API_KEY }}
+    secrets: inherit
