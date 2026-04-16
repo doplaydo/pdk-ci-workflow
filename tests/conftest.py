@@ -220,7 +220,7 @@ MINIMAL_RELEASE_DRAFTER_WORKFLOW: dict[str, Any] = {
 }
 
 
-MINIMAL_PKD_INIT_PY = textwrap.dedent('''\
+MINIMAL_PDK_INIT_PY = textwrap.dedent('''\
     from gdsfactory import Pdk
     from my_pdk.cells import waveguides
     from gdsfactory.get_factories import get_cells
@@ -267,7 +267,7 @@ def pdk_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     pkg.mkdir()
     (pkg / "__init__.py").write_text(MINIMAL_INIT_PY)
     (pkg / "tech.py").write_text(MINIMAL_TECH_PY)
-    (pkg / "pdk.py").write_text(MINIMAL_PKD_INIT_PY)
+    (pkg / "pdk.py").write_text(MINIMAL_PDK_INIT_PY)
 
     # cells subpackage
     cells = pkg / "cells"

@@ -126,14 +126,12 @@ class TestCheckCellsStructure:
         assert main() == 1
 
     def test_syntax_error_in_cell_warns(self, pdk_root: Path) -> None:
-        """Syntax errors in cell files should warn but not crash."""
+        """Syntax errors in cell files produce a warning, not an error.
+        The hook still passes (returns 0) because warnings are non-fatal."""
         (pdk_root / "my_pdk" / "cells" / "waveguides.py").write_text(
             "def (:\n"
         )
-        # Should not crash, and the syntax error cell is just warned about
-        result = main()
-        # result could be 0 (just warnings) since syntax errors produce warnings
-        assert result in (0, 1)
+        assert main() == 0
 
     def test_cell_with_call_decorator_passes(self, pdk_root: Path) -> None:
         """@gf.cell() (with call) should be recognized."""

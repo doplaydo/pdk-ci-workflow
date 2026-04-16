@@ -37,30 +37,15 @@ class TestCheckMultiBand:
         assert main() == 0
 
     def test_missing_init_in_band_fails(self, pdk_root: Path) -> None:
+        """Bands without __init__.py are not detected as bands by find_band_dirs,
+        so removing it from one band effectively removes that band from the
+        multi-band check. With two remaining bands, the check runs normally."""
         pkg = pdk_root / "my_pdk"
         _make_band(pkg, "c_band")
-        band2 = _make_band(pkg, "o_band")
-        (band2 / "__init__.py").unlink()
-        # o_band has tech.py but no __init__.py → not detected as band
-        # So if only one band is detected, it's not multi-band → skip
-        # To test this properly, we need 2+ detected bands
-        # Let's create a third band
+        _make_band(pkg, "o_band")
         _make_band(pkg, "l_band")
-        # Now c_band and l_band are detected (2 bands) but o_band missing init
-        # However o_band won't be detected as a band without __init__.py
-        # So the check won't report it. Let's adjust: remove init from detected band
-        (pkg / "l_band" / "__init__.py").unlink()
-        # Now only c_band detected → single band → skip
-        # Better approach: make all 3 bands, then remove init from one
-        (pkg / "l_band" / "__init__.py").write_text("")
-        band_o = pkg / "o_band"
-        (band_o / "__init__.py").write_text("")  # recreate
-        assert main() == 0  # all 3 bands have init now
-        # Now break one
-        (band_o / "__init__.py").unlink()
-        # Re-test — o_band no longer detected as band, so just 2 bands
-        # The check compares detected bands; o_band won't be in the list
-        # So this actually passes. The error only fires for *detected* bands.
+        (pkg / "o_band" / "__init__.py").unlink()
+        # o_band is no longer detected as a band; c_band + l_band are fine
         assert main() == 0
 
     def test_missing_tech_in_band_fails(self, pdk_root: Path) -> None:
