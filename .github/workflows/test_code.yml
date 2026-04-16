@@ -4,7 +4,7 @@ on:
   workflow_call:
     secrets:
       GFP_API_KEY:
-        required: false
+        required: true
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
