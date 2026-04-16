@@ -217,7 +217,7 @@ def check_pytest(data: dict[str, Any], result: CheckResult) -> None:
     """2g: [tool.pytest] or [tool.pytest.ini_options] section."""
     tool_pytest = data.get("tool", {}).get("pytest")
 
-    if not tool_pytest:
+    if tool_pytest is None:
         result.error("[tool.pytest.ini_options] or [tool.pytest] section missing")
         return
 
