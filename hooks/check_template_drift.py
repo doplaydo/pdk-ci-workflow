@@ -3,8 +3,8 @@
 Ruff-style auto-fix: on drift, rewrites local file from the canonical template
 shipped inside this package, then exits 1. Second run sees no drift, exits 0.
 
-Files to enforce are listed in TEMPLATES. Missing local files are skipped
-(hook syncs existing files, does not create new ones).
+Missing local files are created from the canonical template automatically.
+Files to enforce are listed in TEMPLATES.
 """
 
 from __future__ import annotations
@@ -66,10 +66,6 @@ def main() -> int:
     root = files("templates")
 
     for rel in TEMPLATES:
-        local = Path(rel)
-        if not local.exists():
-            continue
-
         parts = rel.split("/")
         src = root
         for p in parts:
@@ -79,6 +75,14 @@ def main() -> int:
             continue
 
         src_text = src.read_text(encoding="utf-8")
+        local = Path(rel)
+
+        if not local.exists():
+            local.parent.mkdir(parents=True, exist_ok=True)
+            local.write_text(src_text, encoding="utf-8")
+            result.error(f"created missing {rel} from upstream template")
+            continue
+
         local_text = local.read_text(encoding="utf-8")
 
         if src_text == local_text:
