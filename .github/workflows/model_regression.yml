@@ -3,7 +3,7 @@ on:
   workflow_call:
     secrets:
       GFP_API_KEY:
-        required: false
+        required: true
 env:
   GFP_API_KEY: ${{ secrets.GFP_API_KEY }}
 concurrency:

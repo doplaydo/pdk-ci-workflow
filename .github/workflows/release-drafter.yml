@@ -7,7 +7,7 @@ on:
   workflow_call:
     secrets:
       ANTHROPIC_API_KEY:
-        required: false
+        required: true
 permissions:
   contents: read
 jobs:

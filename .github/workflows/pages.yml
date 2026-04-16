@@ -3,9 +3,9 @@ on:
   workflow_call:
     secrets:
       GFP_API_KEY:
-        required: false
+        required: true
       SIMCLOUD_APIKEY:
-        required: false
+        required: true
 jobs:
   build-docs:
     if: github.event_name != 'pull_request' || github.event.pull_request.user.login != 'dependabot[bot]'
