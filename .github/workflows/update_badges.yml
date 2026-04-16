@@ -26,21 +26,16 @@ jobs:
 
       - name: Detect package name
         id: pkg
+        shell: uv run python {0}
         run: |
-          pkg=$(uv run python -c "
-          import tomllib
-          with open('pyproject.toml', 'rb') as f:
+          import tomllib, os
+          with open("pyproject.toml", "rb") as f:
               cfg = tomllib.load(f)
-          module = cfg.get('tool', {}).get('gdsfactoryplus', {}).get('pdk', {}).get('name', '')
-          print(module.split('.')[0] if module else '')
-          ")
-          echo "name=$pkg" >> "$GITHUB_OUTPUT"
-          echo "module=$(uv run python -c "
-          import tomllib
-          with open('pyproject.toml', 'rb') as f:
-              cfg = tomllib.load(f)
-          print(cfg.get('tool', {}).get('gdsfactoryplus', {}).get('pdk', {}).get('name', ''))
-          ")" >> "$GITHUB_OUTPUT"
+          module = cfg.get("tool", {}).get("gdsfactoryplus", {}).get("pdk", {}).get("name", "")
+          name = module.split(".")[0] if module else ""
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"name={name}\n")
+              f.write(f"module={module}\n")
 
       - name: Compute test coverage
         run: make test
@@ -49,14 +44,15 @@ jobs:
           PYTEST_ADDOPTS: "--cov=${{ steps.pkg.outputs.name }} --cov-report=xml --cov-append -q"
 
       - name: Generate all badges
+        shell: uv run python {0}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PDK_MODULE: ${{ steps.pkg.outputs.module }}
         run: |
-          mkdir -p badges
-          uv run python - <<'PYEOF'
           import importlib, os, subprocess, xml.etree.ElementTree as ET
           from pathlib import Path
+
+          os.makedirs("badges", exist_ok=True)
 
           SVG_TEMPLATE = """\
           <svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="20">
@@ -135,7 +131,6 @@ jobs:
           open_prs = gh_count("is:pr+is:open")
           make_badge("issues", str(open_issues), "#4c1" if open_issues == 0 else ("#dfb317" if open_issues < 10 else "#e05d44"), "issues.svg")
           make_badge("PRs", str(open_prs), "#4c1" if open_prs == 0 else ("#dfb317" if open_prs < 10 else "#e05d44"), "prs.svg")
-          PYEOF
 
       - name: Push badges to badges branch
         if: github.ref == 'refs/heads/main'
