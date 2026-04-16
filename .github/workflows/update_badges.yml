@@ -33,7 +33,7 @@ jobs:
               cfg = tomllib.load(f)
           module = cfg.get("tool", {}).get("gdsfactoryplus", {}).get("pdk", {}).get("name", "")
           name = module.split(".")[0] if module else ""
-          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+          with open(os.environ.get("GITHUB_OUTPUT", "/dev/null"), "a") as f:
               f.write(f"name={name}\n")
               f.write(f"module={module}\n")
 
