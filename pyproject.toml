@@ -39,6 +39,10 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["hooks*", "templates*"]
+exclude = [".github*", "tests*", "scripts*"]
 
 [tool.setuptools.package-data]
 "templates" = [".github/**/*"]
+
+[tool.setuptools.exclude-package-data]
+"templates" = [".github/workflows/test_hooks.yml"]
