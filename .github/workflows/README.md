@@ -11,9 +11,13 @@ PDK repos create thin wrapper workflows that call these using `secrets: inherit`
 | `test_code.yml` | pre-commit, test_code, test_gfp | `GFP_API_KEY` | Pre-commit (fetches canonical config), pytest, GFP validation |
 | `pages.yml` | build-docs, deploy-docs | `GFP_API_KEY`, `SIMCLOUD_APIKEY` | Sphinx docs build and GitHub Pages deployment |
 | `claude-pr-review.yml` | review | `ANTHROPIC_API_KEY` | AI code review via Claude Sonnet 4 on PRs |
-| `release-drafter.yml` | update_release_draft | `GITHUB_TOKEN` | Auto-drafted release notes with semantic versioning |
+| `release-drafter.yml` | update_release_draft | `GITHUB_TOKEN`, `ANTHROPIC_API_KEY` | Auto-drafted release notes with Claude-curated changelog |
 | `drc.yml` | drc | `GFP_API_KEY` | Design Rule Check with badge generation |
 | `issue.yml` | add-label | `GITHUB_TOKEN` | Auto-labels issues with "pdk" tag |
+| `test_coverage.yml` | coverage | `GFP_API_KEY` | Pytest with line coverage reporting |
+| `model_coverage.yml` | model-coverage | `GFP_API_KEY` | PDK model-to-cell coverage check |
+| `model_regression.yml` | model-regression | `GFP_API_KEY` | Model-specific regression tests |
+| `update_badges.yml` | badges | `GFP_API_KEY`, `GITHUB_TOKEN` | Generate coverage, model, issue, and PR badges |
 
 ## Example Usage
 

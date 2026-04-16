@@ -111,9 +111,13 @@ PDK repos reference these workflows via `workflow_call`. Create thin wrapper wor
 | `test_code.yml` | pre-commit, test_code, test_gfp | Pre-commit (canonical config), pytest, GFP validation |
 | `pages.yml` | build-docs, deploy-docs | Sphinx docs build and GitHub Pages deployment |
 | `claude-pr-review.yml` | review | AI code review via Claude Sonnet 4 on PRs |
-| `release-drafter.yml` | update_release_draft | Auto-drafted release notes with semantic versioning |
+| `release-drafter.yml` | update_release_draft | Auto-drafted release notes with Claude-curated changelog |
 | `drc.yml` | drc | Design Rule Check with GFP and badge generation |
 | `issue.yml` | add-label | Auto-labels issues with "pdk" tag |
+| `test_coverage.yml` | coverage | Pytest with line coverage reporting |
+| `model_coverage.yml` | model-coverage | PDK model-to-cell coverage check |
+| `model_regression.yml` | model-regression | Model-specific regression tests |
+| `update_badges.yml` | badges | Generate coverage, model, issue, and PR badges |
 
 All workflows are called from PDK repos using `secrets: inherit`:
 
@@ -132,9 +136,10 @@ PDK repos should have these secrets configured (passed automatically via `secret
 
 | Secret | Used by |
 |--------|---------|
-| `GFP_API_KEY` | test_code, pages, drc |
-| `ANTHROPIC_API_KEY` | claude-pr-review |
-| `GITHUB_TOKEN` | release-drafter, issue (automatic) |
+| `GFP_API_KEY` | test_code, pages, drc, test_coverage, model_coverage, model_regression, update_badges |
+| `ANTHROPIC_API_KEY` | claude-pr-review, release-drafter (changelog curation) |
+| `SIMCLOUD_APIKEY` | pages |
+| `GITHUB_TOKEN` | release-drafter, issue, update_badges (automatic) |
 
 ## Pre-commit Hooks
 
@@ -172,6 +177,7 @@ See [`hooks/README.md`](hooks/README.md) for detailed documentation.
 
 | Hook ID | What it checks |
 |---------|---------------|
+| `check-test-structure` | `tests/` directory with test files, GDS reference dirs, `difftest()` calls, `data_regression` usage |
 | `check-makefile-targets` | Required targets (install, test) and recommended targets (docs, build, test-force, update-pre, dev) |
 | `check-workflows` | `.github/workflows/` has test_code.yml with pre-commit and test jobs |
 | `check-precommit-config` | `.pre-commit-config.yaml` includes required hooks (trailing-whitespace, end-of-file-fixer, ruff or ruff-lint, ruff-format) |
@@ -195,9 +201,13 @@ Reference configuration files are provided in `templates/` for onboarding new PD
 | `.github/workflows/test_code.yml` | Pre-commit, pytest, and GFP validation |
 | `.github/workflows/pages.yml` | Sphinx docs build and GitHub Pages deployment |
 | `.github/workflows/claude-pr-review.yml` | AI code review via Claude |
-| `.github/workflows/release-drafter.yml` | Semantic versioning and release notes |
+| `.github/workflows/release-drafter.yml` | Semantic versioning and Claude-curated release notes |
 | `.github/workflows/drc.yml` | Design Rule Check via GFP |
 | `.github/workflows/issue.yml` | Auto-label PDK issues |
+| `.github/workflows/test_coverage.yml` | Pytest with line coverage reporting |
+| `.github/workflows/model_coverage.yml` | PDK model-to-cell coverage check |
+| `.github/workflows/model_regression.yml` | Model-specific regression tests |
+| `.github/workflows/update_badges.yml` | Generate coverage, model, issue, and PR badges |
 | `.github/dependabot.yml` | Monthly pip and github-actions dependency updates |
 | `.github/release-drafter.yml` | Release note template with semantic versioning categories |
 
@@ -235,8 +245,9 @@ PDK repositories consuming these workflows need:
 ### GitHub Secrets
 
 For PDK repositories (passed automatically via `secrets: inherit`):
-- `GFP_API_KEY` - For GDSFactory Platform validation (test_code, pages, drc)
-- `ANTHROPIC_API_KEY` - For Claude code reviews (claude-pr-review)
+- `GFP_API_KEY` - GDSFactory Platform validation (test_code, pages, drc, test_coverage, model_coverage, model_regression, update_badges)
+- `ANTHROPIC_API_KEY` - Claude code reviews and release note curation (claude-pr-review, release-drafter)
+- `SIMCLOUD_APIKEY` - Simulation cloud access (pages)
 
 ### GitHub Pages (for documentation)
 Enable GitHub Pages in your repository settings:

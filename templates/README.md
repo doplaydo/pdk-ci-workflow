@@ -11,9 +11,13 @@ Minimal wrappers — each just calls the upstream reusable workflow with `secret
 | `.github/workflows/test_code.yml` | Pre-commit, pytest, GFP validation |
 | `.github/workflows/pages.yml` | Sphinx docs build + GitHub Pages |
 | `.github/workflows/claude-pr-review.yml` | AI code review via Claude |
-| `.github/workflows/release-drafter.yml` | Semantic versioning + release notes |
+| `.github/workflows/release-drafter.yml` | Semantic versioning + Claude-curated release notes |
 | `.github/workflows/drc.yml` | Design Rule Check via GFP |
 | `.github/workflows/issue.yml` | Auto-label PDK issues |
+| `.github/workflows/test_coverage.yml` | Pytest with line coverage reporting |
+| `.github/workflows/model_coverage.yml` | PDK model-to-cell coverage check |
+| `.github/workflows/model_regression.yml` | Model-specific regression tests |
+| `.github/workflows/update_badges.yml` | Generate coverage, model, issue, and PR badges |
 
 ## Pre-commit Config
 
