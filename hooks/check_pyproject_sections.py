@@ -214,15 +214,21 @@ def check_codespell(data: dict[str, Any], result: CheckResult) -> None:
 
 
 def check_pytest(data: dict[str, Any], result: CheckResult) -> None:
-    """2g: [tool.pytest.ini_options] section."""
-    pytest_cfg = data.get("tool", {}).get("pytest", {}).get("ini_options")
-    if pytest_cfg is None:
-        result.error("[tool.pytest.ini_options] section missing")
+    """2g: [tool.pytest] or [tool.pytest.ini_options] section."""
+    tool_pytest = data.get("tool", {}).get("pytest")
+
+    if tool_pytest is None:
+        result.error("[tool.pytest.ini_options] or [tool.pytest] section missing")
         return
+
+    # Fallback to tool_pytest if "ini_options" isn't present
+    pytest_cfg = tool_pytest.get("ini_options", tool_pytest)
+    name = "[tool.pytest.ini_options]" if "ini_options" in tool_pytest else "[tool.pytest]"
+
     if "testpaths" not in pytest_cfg:
-        result.error("[tool.pytest.ini_options].testpaths missing")
+        result.error(f"{name}.testpaths missing")
     if "addopts" not in pytest_cfg:
-        result.warn("[tool.pytest.ini_options].addopts missing (recommend '--tb=short')")
+        result.warn(f"{name}.addopts missing (recommend '--tb=short')")
 
 
 def check_package_data(data: dict[str, Any], result: CheckResult) -> None:
