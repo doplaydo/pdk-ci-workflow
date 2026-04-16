@@ -17,7 +17,7 @@ PDK repos create thin wrapper workflows that call these using `secrets: inherit`
 | `test_coverage.yml` | coverage | `GFP_API_KEY` | Pytest with line coverage reporting |
 | `model_coverage.yml` | model-coverage | `GFP_API_KEY` | PDK model-to-cell coverage check |
 | `model_regression.yml` | model-regression | `GFP_API_KEY` | Model-specific regression tests |
-| `update_badges.yml` | badges | `GFP_API_KEY` | Generate coverage, model, issue, and PR badges |
+| `update_badges.yml` | badges | `GFP_API_KEY`, `GITHUB_TOKEN` | Generate coverage, model, issue, and PR badges |
 
 ## Example Usage
 
