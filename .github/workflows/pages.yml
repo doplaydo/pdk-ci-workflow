@@ -6,10 +6,6 @@ on:
         required: false
       SIMCLOUD_APIKEY:
         required: false
-permissions:
-  pages: write
-  id-token: write
-  contents: read
 jobs:
   build-docs:
     if: github.event_name != 'pull_request' || github.event.pull_request.user.login != 'dependabot[bot]'
@@ -36,15 +32,3 @@ jobs:
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
         with:
           path: "./docs/_build/html/"
-  deploy-docs:
-    needs: build-docs
-    if: ${{ github.ref == 'refs/heads/main' }}
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
-        
