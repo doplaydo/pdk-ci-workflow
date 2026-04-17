@@ -6,6 +6,9 @@ on:
         required: false
       SIMCLOUD_APIKEY:
         required: false
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-pages
+  cancel-in-progress: false
 jobs:
   build-docs:
     if: github.event_name != 'pull_request' || github.event.pull_request.user.login != 'dependabot[bot]'
