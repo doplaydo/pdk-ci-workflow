@@ -11,7 +11,7 @@ permissions:
   issues: read
   pull-requests: read
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-update_badges
   cancel-in-progress: true
 jobs:
   badges:
