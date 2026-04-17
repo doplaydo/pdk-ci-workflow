@@ -21,8 +21,14 @@ jobs:
     - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
     - name: Fetch canonical pre-commit config
       run: |
-        curl -fSL https://raw.githubusercontent.com/doplaydo/pdk-ci-workflow/main/templates/.pre-commit-config.yaml \
+        # Resolve upstream main to a real SHA and bake it into the config so
+        # pre-commit/action's cache key (hashFiles of the config) invalidates
+        # whenever upstream moves. With a literal `rev: main`, the hash is
+        # stable and stale hook envs stick around indefinitely.
+        SHA=$(git ls-remote https://github.com/doplaydo/pdk-ci-workflow.git main | cut -f1)
+        curl -fSL "https://raw.githubusercontent.com/doplaydo/pdk-ci-workflow/${SHA}/templates/.pre-commit-config.yaml" \
           -o .pre-commit-config.yaml
+        sed -i "s|rev: main|rev: ${SHA}|" .pre-commit-config.yaml
     - uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
   test_code:
     runs-on: ubuntu-latest
