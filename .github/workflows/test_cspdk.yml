@@ -1,0 +1,31 @@
+name: Test cspdk
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-test_cspdk
+  cancel-in-progress: true
+
+jobs:
+  test_cspdk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout cspdk
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          repository: gdsfactory/cspdk
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: '3.12'
+      - name: Install uv
+        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
+      - name: Install dependencies
+        run: make install
+      - name: Test with pytest
+        run: make test
