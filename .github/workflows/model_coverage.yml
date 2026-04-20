@@ -20,8 +20,8 @@ jobs:
       - name: Install dependencies
         run: make install
       - name: Check model coverage
+        shell: uv run python {0}
         run: |
-          uv run python - <<'PYEOF'
           import importlib, os, tomllib
           from pathlib import Path
 
@@ -49,4 +49,3 @@ jobs:
               f.write(f"| Cells with model | {with_model} |\n")
               f.write(f"| Coverage | {pct:.1f}% |\n")
           print(f"Model coverage: {with_model}/{total} ({pct:.1f}%)")
-          PYEOF
