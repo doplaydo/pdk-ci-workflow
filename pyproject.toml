@@ -35,4 +35,4 @@ where = ["."]
 include = ["hooks*", "templates*"]
 
 [tool.setuptools.package-data]
-"templates" = [".github/**/*"]
+"templates" = [".github/**/*", "build_cell.py"]
