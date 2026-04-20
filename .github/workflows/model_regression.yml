@@ -39,4 +39,4 @@ jobs:
           name: difftest-report-model_regression
           path: test_diffs/
           if-no-files-found: ignore
-          retention-days: 14
+          retention-days: 3

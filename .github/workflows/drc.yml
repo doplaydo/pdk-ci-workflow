@@ -39,6 +39,7 @@ jobs:
           path: |
             build/lyrdb/
             build/gds/all_cells.gds
+          retention-days: 3
       - name: Create and commit DRC badge
         if: always()
         run: |
