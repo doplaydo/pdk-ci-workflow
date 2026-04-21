@@ -46,18 +46,36 @@ jobs:
           gh api --method POST -H "Accept: application/vnd.github+json" \
             "/repos/${{ github.repository }}/issues/comments/${{ github.event.comment.id }}/reactions" \
             -f content='eyes' || true
-      - name: Dump prior bot review comments
+      - name: Dump PR discussion for dedup
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN || github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
+          REPO: ${{ github.repository }}
         run: |
-          {
-            gh api --paginate "/repos/${{ github.repository }}/pulls/$PR_NUMBER/comments" \
-              --jq '.[] | select(.user.type=="Bot") | {kind:"inline", path, line, body}'
-            gh api --paginate "/repos/${{ github.repository }}/issues/$PR_NUMBER/comments" \
-              --jq '.[] | select(.user.type=="Bot") | {kind:"toplevel", body}'
-          } > .claude_prior_comments.jsonl || true
-          echo "prior comments: $(wc -l < .claude_prior_comments.jsonl || echo 0)"
+          owner="${REPO%%/*}"
+          name="${REPO##*/}"
+          gh api graphql -F owner="$owner" -F repo="$name" -F pr="$PR_NUMBER" -f query='
+            query($owner:String!, $repo:String!, $pr:Int!) {
+              repository(owner:$owner, name:$repo) {
+                pullRequest(number:$pr) {
+                  reviewThreads(first:100) {
+                    nodes {
+                      isResolved
+                      isOutdated
+                      path
+                      line
+                      comments(first:50) { nodes { author { login } body } }
+                    }
+                  }
+                }
+              }
+            }' --jq '.data.repository.pullRequest.reviewThreads.nodes[]' \
+            > .claude_pr_threads.jsonl || true
+          gh api --paginate "/repos/$REPO/issues/$PR_NUMBER/comments" \
+            --jq '.[] | {author:.user.login, body}' \
+            > .claude_pr_toplevel.jsonl || true
+          echo "threads: $(wc -l < .claude_pr_threads.jsonl || echo 0)"
+          echo "toplevel: $(wc -l < .claude_pr_toplevel.jsonl || echo 0)"
       - uses: anthropics/claude-code-action@905d4eb99ab3d43143d74fb0dcae537f29ac330a # v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -78,7 +96,7 @@ jobs:
             - Get familiar with the codebase by reading ./AGENTS.md in the repo root.
             - You are called on new commits to the PR, so focus on the latest changes and how they integrate with the existing code. Avoid redundant comments on unchanged code.
             - Cap at 5 comments per review. Pick the most important. Skip anything already caught by ruff/pre-commit.
-            - Before posting, read `.claude_prior_comments.jsonl` (one JSON object per line) — comments you already posted on this PR. Do not repost the same issue (same path and same root cause). If the code referenced by a prior comment no longer exists or is already fixed, skip instead of re-raising.
+            - Before posting, read `.claude_pr_threads.jsonl` (inline review threads, one per line: isResolved, isOutdated, path, line, comments[]) and `.claude_pr_toplevel.jsonl` (top-level PR comments). Skip an issue if any of these are true for a matching prior thread (same path + same root cause): `isResolved: true` (human closed it), `isOutdated: true` (code moved — raise fresh only if still wrong), a human has replied (they've engaged; leave it alone), or the referenced code no longer exists or is already fixed.
 
             Output format — ultra-terse, one line per issue:
             - Drop articles (a/an/the), filler words, pleasantries, and preamble.
