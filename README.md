@@ -110,7 +110,7 @@ PDK repos reference these workflows via `workflow_call`. Create thin wrapper wor
 |----------|------|-------------|
 | `test_code.yml` | pre-commit, test_code, test_gfp | Pre-commit (canonical config), pytest, GFP validation |
 | `pages.yml` | build-docs, deploy-docs | Sphinx docs build and GitHub Pages deployment |
-| `claude-pr-review.yml` | review | AI code review via Claude Sonnet 4 on PRs |
+| `claude-pr-review.yml` | review | AI code review via Claude Sonnet 4. Runs once on PR open/reopen; re-run on demand by commenting `/claude-api review` |
 | `release-drafter.yml` | update_release_draft | Auto-drafted release notes with Claude-curated changelog |
 | `drc.yml` | drc | Design Rule Check with GFP and badge generation |
 | `issue.yml` | add-label | Auto-labels issues with "pdk" tag |
@@ -200,7 +200,7 @@ Reference configuration files are provided in `templates/` for onboarding new PD
 | `.pre-commit-config.yaml` | Canonical pre-commit config (PDK hooks + third-party tools with centralized versions) |
 | `.github/workflows/test_code.yml` | Pre-commit, pytest, and GFP validation |
 | `.github/workflows/pages.yml` | Sphinx docs build and GitHub Pages deployment |
-| `.github/workflows/claude-pr-review.yml` | AI code review via Claude |
+| `.github/workflows/claude-pr-review.yml` | AI code review via Claude — runs once on PR open/reopen; re-run on demand with `/claude-api review` comment |
 | `.github/workflows/release-drafter.yml` | Semantic versioning and Claude-curated release notes |
 | `.github/workflows/drc.yml` | Design Rule Check via GFP |
 | `.github/workflows/issue.yml` | Auto-label PDK issues |
