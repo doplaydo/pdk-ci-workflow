@@ -1,0 +1,56 @@
+name: Downstream dispatch
+
+# Phase 1: prove App auth + repository_dispatch roundtrip.
+# Manual + push trigger until verified. PR trigger added later.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "pdk-ci-workflow ref to test (defaults to this workflow's sha)"
+        required: false
+        default: ""
+  # Temporary: fires on every push to this branch so we can iterate before
+  # merging workflow_dispatch support to main. Remove once merged.
+  push:
+    branches:
+      - 47-add-downstream-ci-workflow-app-dispatch
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - owner: doplaydo
+            repo: hhi
+          - owner: gdsfactory
+            repo: cspdk
+    steps:
+      - name: Generate App token
+        id: app-token
+        uses: actions/create-github-app-token@f8d387b68d61c58ab83c6c016672934102569859 # v3.0.0
+        with:
+          app-id: ${{ vars.GH_APP_PDK_WORKFLOW_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PDK_WORKFLOW_PRIVATE_KEY }}
+          owner: ${{ matrix.owner }}
+          repositories: ${{ matrix.repo }}
+
+      - name: Send repository_dispatch
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          OWNER: ${{ matrix.owner }}
+          REPO: ${{ matrix.repo }}
+          REF: ${{ github.event.inputs.ref || github.sha }}
+          PR_NUMBER: "0"
+          SOURCE_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          echo "Dispatching pdk-ci-workflow-test to $OWNER/$REPO (ref=$REF)"
+          gh api --method POST "repos/$OWNER/$REPO/dispatches" \
+            -f "event_type=pdk-ci-workflow-test" \
+            -f "client_payload[ref]=$REF" \
+            -f "client_payload[pr_number]=$PR_NUMBER" \
+            -f "client_payload[source_repo]=$SOURCE_REPO"
+          echo "Dispatched. Check https://github.com/$OWNER/$REPO/actions for event."
