@@ -10,6 +10,11 @@ on:
         description: "pdk-ci-workflow ref to test (defaults to this workflow's sha)"
         required: false
         default: ""
+  # Temporary: fires on every push to this branch so we can iterate before
+  # merging workflow_dispatch support to main. Remove once merged.
+  push:
+    branches:
+      - 47-add-downstream-ci-workflow-app-dispatch
 
 jobs:
   dispatch:
