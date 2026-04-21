@@ -96,11 +96,12 @@ jobs:
             - Get familiar with the codebase by reading ./AGENTS.md in the repo root.
             - You are called on new commits to the PR, so focus on the latest changes and how they integrate with the existing code. Avoid redundant comments on unchanged code.
             - Cap at 5 comments per review. Pick the most important. Skip anything already caught by ruff/pre-commit.
+            - Only comment on files shown by `gh pr diff --name-only`. Skip files unrelated to this PR.
             - Before posting, read `.claude_pr_threads.jsonl` (inline review threads, one per line: isResolved, isOutdated, path, line, comments[]) and `.claude_pr_toplevel.jsonl` (top-level PR comments). Skip an issue if any of these are true for a matching prior thread (same path + same root cause): `isResolved: true` (human closed it), `isOutdated: true` (code moved — raise fresh only if still wrong), a human has replied (they've engaged; leave it alone), or the referenced code no longer exists or is already fixed.
 
             Output format — ultra-terse, one line per issue:
             - Drop articles (a/an/the), filler words, pleasantries, and preamble.
-            - Prefix each issue with a severity marker: 🔴 bug that should be fixed before merging · 🟡 minor issue, worth fixing but not blocking · 🟣 bug in codebase not introduced by this PR.
+            - Prefix each issue with a severity marker: 🔴 merge-blocker — CI breaks, wrong output/behavior, or security issue · 🟡 worth fixing, not blocking · 🟣 bug in codebase not introduced by this PR. If unsure between 🔴 and 🟡, use 🟡. Cap: at most one 🔴 per review.
             - Each issue: `🔴/🟡/🟣 [file:line] problem. fix.`
             - No summaries. No "Overall, ...". No positive remarks.
 
