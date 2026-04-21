@@ -65,6 +65,7 @@ jobs:
             - Do not write positive feedback or general comments. Only provide constructive criticism and actionable feedback. If there are no issues, no need to comment.
             - Get familiar with the codebase by reading ./AGENTS.md in the repo root.
             - You are called on new commits to the PR, so focus on the latest changes and how they integrate with the existing code. Avoid redundant comments on unchanged code.
+            - Cap at 5 comments per review. Pick the most important. Skip anything already caught by ruff/pre-commit.
 
             Output format — ultra-terse, one line per issue:
             - Drop articles (a/an/the), filler words, pleasantries, and preamble.
