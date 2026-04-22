@@ -43,12 +43,36 @@ jobs:
           with_model = len(relevant_cells & set(models))
           pct = (with_model / total * 100) if total else 0
 
+          cells_with_model = sorted(relevant_cells & set(models))
+          cells_without_model = sorted(relevant_cells - set(models))
+          cells_no_model_expected = sorted(skip & set(cells))
+
           summary = os.environ.get("GITHUB_STEP_SUMMARY", "/dev/null")
           with open(summary, "a") as f:
               f.write(f"## Model Coverage\n\n")
               f.write(f"| Metric | Value |\n|--------|-------|\n")
-              f.write(f"| Cells | {total} |\n")
-              f.write(f"| Cells with model | {with_model} |\n")
-              f.write(f"| Coverage | {pct:.1f}% |\n")
+              f.write(f"| Cells with model | {len(cells_with_model)} |\n")
+              f.write(f"| Cells without model | {len(cells_without_model)} |\n")
+              f.write(f"| Cells no model expected | {len(cells_no_model_expected)} |\n")
+              f.write(f"| **Coverage** | **{pct:.1f}%** |\n\n")
+
+              if cells_with_model:
+                  f.write(f"<details><summary>Cells with model ({len(cells_with_model)})</summary>\n\n")
+                  for c in cells_with_model:
+                      f.write(f"- [x] `{c}`\n")
+                  f.write("\n</details>\n\n")
+
+              if cells_without_model:
+                  f.write(f"<details><summary>Cells without model ({len(cells_without_model)})</summary>\n\n")
+                  for c in cells_without_model:
+                      f.write(f"- [ ] `{c}`\n")
+                  f.write("\n</details>\n\n")
+
+              if cells_no_model_expected:
+                  f.write(f"<details><summary>Cells no model expected ({len(cells_no_model_expected)})</summary>\n\n")
+                  for c in cells_no_model_expected:
+                      f.write(f"- `{c}`\n")
+                  f.write("\n</details>\n\n")
+
           print(f"Model coverage: {with_model}/{total} ({pct:.1f}%)")
           PYEOF
