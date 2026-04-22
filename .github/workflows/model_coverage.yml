@@ -51,6 +51,7 @@ jobs:
           with open(summary, "a") as f:
               f.write(f"## Model Coverage\n\n")
               f.write(f"| Metric | Value |\n|--------|-------|\n")
+              f.write(f"| Cells (relevant) | {total} |\n")
               f.write(f"| Cells with model | {len(cells_with_model)} |\n")
               f.write(f"| Cells without model | {len(cells_without_model)} |\n")
               f.write(f"| Cells no model expected | {len(cells_no_model_expected)} |\n")
