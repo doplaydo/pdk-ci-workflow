@@ -2,8 +2,10 @@
 
 When cell_name is "all_cells", builds every PDK-owned cell that can be
 instantiated with default arguments and packs them into a single GDS.
-Cells from installed packages (site-packages / .venv) and cells that
-require positional arguments are skipped automatically.
+Cells from installed packages (site-packages / .venv), cells located
+under a ``samples/`` directory (demo/tapeout cells that re-use BB cells
+and would cause cellname collisions), and cells that require positional
+arguments are skipped automatically.
 """
 
 import inspect
@@ -28,6 +30,13 @@ if cell_name == "all_cells":
         except TypeError:
             continue
         if ".venv" in src or "site-packages" in src:
+            continue
+
+        # Skip demo/tapeout cells under a samples/ directory: they re-use BB
+        # cells already registered as top-level PDK cells, which would cause
+        # cellname collisions when packed together.
+        if "/samples/" in src or src.endswith("/samples"):
+            print(f"Skipping {name}: in samples/")
             continue
 
         # Skip cells that require positional arguments
