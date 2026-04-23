@@ -34,8 +34,19 @@ jobs:
       - name: Install dependencies
         run: |
           make dev
-      - name: Download sync_changelog script
-        run: curl -fsSL https://raw.githubusercontent.com/doplaydo/pdk-ci-workflow/main/scripts/sync_changelog.py -o sync_changelog.py
+      - name: Sync changelog
+        run: |
+          python -c "
+          import re
+          from pathlib import Path
+          src = Path('CHANGELOG.md')
+          dst = Path('docs/changelog.md')
+          if src.exists():
+              text = src.read_text(encoding='utf-8')
+              cleaned = re.sub(r'\[([^\]]*)\]\([^)]*\)', r'\1', text)
+              dst.parent.mkdir(parents=True, exist_ok=True)
+              dst.write_text(cleaned, encoding='utf-8')
+          "
       - name: make docs
         run: |
           make docs
