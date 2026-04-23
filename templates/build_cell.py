@@ -24,7 +24,7 @@ if cell_name == "all_cells":
     for name, func in sorted(pdk.cells.items()):
         # Skip cells from installed packages (not PDK-owned)
         try:
-            src = inspect.getfile(func)
+            src = inspect.getfile(inspect.unwrap(func))
         except TypeError:
             continue
         if ".venv" in src or "site-packages" in src:
