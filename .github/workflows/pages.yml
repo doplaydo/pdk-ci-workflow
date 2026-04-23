@@ -34,6 +34,19 @@ jobs:
       - name: Install dependencies
         run: |
           make dev
+      - name: Sync changelog
+        run: |
+          python -c "
+          import re
+          from pathlib import Path
+          src = Path('CHANGELOG.md')
+          dst = Path('docs/changelog.md')
+          if src.exists():
+              text = src.read_text()
+              cleaned = re.sub(r'\[(.*?)\]\(.*?\)', r'\1', text, flags=re.DOTALL)
+              dst.parent.mkdir(parents=True, exist_ok=True)
+              dst.write_text(cleaned)
+          "
       - name: make docs
         run: |
           make docs
