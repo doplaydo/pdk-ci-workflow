@@ -34,6 +34,8 @@ jobs:
       - name: Install dependencies
         run: |
           make dev
+      - name: Download sync_changelog script
+        run: curl -fsSL https://raw.githubusercontent.com/doplaydo/pdk-ci-workflow/main/scripts/sync_changelog.py -o sync_changelog.py
       - name: make docs
         run: |
           make docs
