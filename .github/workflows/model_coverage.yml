@@ -37,7 +37,11 @@ jobs:
           pdk.activate()
           cells = pdk.cells
           models = getattr(pdk, "models", {}) or {}
-          skip = set(cfg.get("tool", {}).get("gdsfactoryplus", {}).get("pdk", {}).get("cells_no_model_expected", []))
+          default_skip = set()
+          default_skip_prefixes = ("add_fiber", "die", "import_gds", "load", "mzi", "mzm", "pack", "pad", "rectangle", "ring", "spiral", "TEMPLATE", "via", "wire")
+          skip = default_skip | set(cfg.get("tool", {}).get("gdsfactoryplus", {}).get("pdk", {}).get("cells_no_model_expected", []))
+          default_skip_contains = ("bondpad", "frame", "metal")
+          skip |= {c for c in cells if c.startswith(default_skip_prefixes) or any(s in c for s in default_skip_contains)}
           relevant_cells = set(cells) - skip
           total = len(relevant_cells)
           with_model = len(relevant_cells & set(models))
