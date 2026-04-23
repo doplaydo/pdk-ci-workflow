@@ -19,7 +19,6 @@ from hooks._utils import CheckResult, load_toml
 # Paths (relative to PDK repo root) that must match the upstream template of
 # the same relative path under `templates/` in pdk-ci-workflow.
 TEMPLATES: list[str] = [
-    "build_cell.py",
     ".github/dependabot.yml",
     ".github/release-drafter.yml",
     ".github/workflows/claude-pr-review.yml",
@@ -32,6 +31,13 @@ TEMPLATES: list[str] = [
     ".github/workflows/test_code.yml",
     ".github/workflows/test_coverage.yml",
     ".github/workflows/update_badges.yml",
+]
+
+# Files previously shipped as templates that are now fetched at runtime by
+# reusable workflows.  If they still exist in a PDK repo the hook deletes them
+# so stale copies don't shadow the centrally-maintained version.
+DEPRECATED_TEMPLATES: list[str] = [
+    "build_cell.py",
 ]
 
 
@@ -92,6 +98,12 @@ def main() -> int:
         local.write_text(src_text, encoding="utf-8")
         print(_diff(local_text, src_text, rel))
         result.error(f"rewrote {rel} from upstream template")
+
+    for rel in DEPRECATED_TEMPLATES:
+        local = Path(rel)
+        if local.exists():
+            local.unlink()
+            result.error(f"deleted deprecated template {rel} (now fetched by CI)")
 
     return result.report()
 
