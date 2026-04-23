@@ -45,7 +45,7 @@ jobs:
               text = src.read_text(encoding='utf-8')
               cleaned = re.sub(r'\[([^\]]*)\]\([^)]*\)', r'\1', text)
               dst.parent.mkdir(parents=True, exist_ok=True)
-              dst.write_text(cleaned)
+              dst.write_text(cleaned, encoding='utf-8')
           "
       - name: make docs
         run: |
