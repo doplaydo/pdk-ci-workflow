@@ -25,6 +25,8 @@ jobs:
         run: uv run --no-project --with gdsfactoryplus gfp configure --api-key ${{ secrets.GFP_API_KEY }} --uv
       - name: Install dependencies
         run: uv sync --all-extras
+      - name: Download build_cell script
+        run: curl -fsSL https://raw.githubusercontent.com/doplaydo/pdk-ci-workflow/main/scripts/build_cell.py -o build_cell.py
       - name: Build cell
         run: uv run python build_cell.py all_cells
       - name: Run DRC
