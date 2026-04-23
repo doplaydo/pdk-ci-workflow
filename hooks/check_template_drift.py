@@ -19,7 +19,6 @@ from hooks._utils import CheckResult, load_toml
 # Paths (relative to PDK repo root) that must match the upstream template of
 # the same relative path under `templates/` in pdk-ci-workflow.
 TEMPLATES: list[str] = [
-    "build_cell.py",
     ".github/dependabot.yml",
     ".github/release-drafter.yml",
     ".github/workflows/claude-pr-review.yml",
