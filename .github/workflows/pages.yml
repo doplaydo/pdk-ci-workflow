@@ -42,7 +42,7 @@ jobs:
           src = Path('CHANGELOG.md')
           dst = Path('docs/changelog.md')
           if src.exists():
-              text = src.read_text()
+              text = src.read_text(encoding='utf-8')
               cleaned = re.sub(r'\[([^\]]*)\]\([^)]*\)', r'\1', text)
               dst.parent.mkdir(parents=True, exist_ok=True)
               dst.write_text(cleaned)
