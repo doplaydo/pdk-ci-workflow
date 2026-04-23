@@ -38,6 +38,7 @@ TEMPLATES: list[str] = [
 # so stale copies don't shadow the centrally-maintained version.
 DEPRECATED_TEMPLATES: list[str] = [
     "build_cell.py",
+    "sync_changelog.py",
 ]
 
 
