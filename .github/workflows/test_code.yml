@@ -7,7 +7,7 @@ on:
         required: false
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-test_code
   cancel-in-progress: true
 
 env:
@@ -23,7 +23,10 @@ jobs:
       run: |
         curl -fSL https://raw.githubusercontent.com/doplaydo/pdk-ci-workflow/main/templates/.pre-commit-config.yaml \
           -o .pre-commit-config.yaml
-    - uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
+    - name: Run pre-commit (no cache — rev uses mutable main branch)
+      run: |
+        pip install pre-commit
+        pre-commit run --all-files
   test_code:
     runs-on: ubuntu-latest
     steps:
@@ -46,7 +49,7 @@ jobs:
           name: difftest-report-test_code
           path: test_diffs/
           if-no-files-found: ignore
-          retention-days: 14
+          retention-days: 3
   test_gfp:
     runs-on: ubuntu-latest
     steps:
@@ -69,4 +72,4 @@ jobs:
           name: difftest-report-test_gfp
           path: test_diffs/
           if-no-files-found: ignore
-          retention-days: 14
+          retention-days: 3

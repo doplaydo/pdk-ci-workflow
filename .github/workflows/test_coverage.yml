@@ -7,7 +7,7 @@ on:
 env:
   GFP_API_KEY: ${{ secrets.GFP_API_KEY }}
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-test_coverage
   cancel-in-progress: true
 jobs:
   coverage:

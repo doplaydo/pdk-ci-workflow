@@ -7,7 +7,7 @@ on:
 env:
   GFP_API_KEY: ${{ secrets.GFP_API_KEY }}
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-model_regression
   cancel-in-progress: true
 jobs:
   model-regression:
@@ -39,4 +39,4 @@ jobs:
           name: difftest-report-model_regression
           path: test_diffs/
           if-no-files-found: ignore
-          retention-days: 14
+          retention-days: 3

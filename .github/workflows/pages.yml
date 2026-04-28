@@ -1,11 +1,20 @@
 name: build docs
 on:
   workflow_call:
+    inputs:
+      retention-days:
+        description: 'Number of days to retain the pages artifact'
+        required: false
+        type: number
+        default: 1
     secrets:
       GFP_API_KEY:
         required: false
       SIMCLOUD_APIKEY:
         required: false
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-pages
+  cancel-in-progress: false
 jobs:
   build-docs:
     if: github.event_name != 'pull_request' || github.event.pull_request.user.login != 'dependabot[bot]'
@@ -25,6 +34,19 @@ jobs:
       - name: Install dependencies
         run: |
           make dev
+      - name: Sync changelog
+        run: |
+          python -c "
+          import re
+          from pathlib import Path
+          src = Path('CHANGELOG.md')
+          dst = Path('docs/changelog.md')
+          if src.exists():
+              text = src.read_text(encoding='utf-8')
+              cleaned = re.sub(r'\[([^\]]*)\]\([^)]*\)', r'\1', text)
+              dst.parent.mkdir(parents=True, exist_ok=True)
+              dst.write_text(cleaned, encoding='utf-8')
+          "
       - name: make docs
         run: |
           make docs
@@ -32,18 +54,4 @@ jobs:
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
         with:
           path: "./docs/_build/html/"
-  deploy-docs:
-    needs: build-docs
-    if: ${{ github.ref == 'refs/heads/main' }}
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
-        
+          retention-days: ${{ inputs.retention-days }}

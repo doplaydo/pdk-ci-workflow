@@ -11,7 +11,7 @@ permissions:
   issues: read
   pull-requests: read
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-update_badges
   cancel-in-progress: true
 jobs:
   badges:
@@ -55,7 +55,7 @@ jobs:
         run: |
           mkdir -p badges
           uv run python - <<'PYEOF'
-          import importlib, os, subprocess, xml.etree.ElementTree as ET
+          import importlib, os, subprocess, tomllib, xml.etree.ElementTree as ET
           from pathlib import Path
 
           SVG_TEMPLATE = """\
@@ -104,13 +104,17 @@ jobs:
           # --- Model Coverage ---
           pdk_module = os.environ.get("PDK_MODULE", "")
           try:
+              with open("pyproject.toml", "rb") as f:
+                  cfg = tomllib.load(f)
+              skip = set(cfg.get("tool", {}).get("gdsfactoryplus", {}).get("pdk", {}).get("cells_no_model_expected", []))
               mod = importlib.import_module(pdk_module)
               pdk = mod.PDK
               pdk.activate()
               cells = pdk.cells
               models = getattr(pdk, "models", {}) or {}
-              total = len(cells)
-              with_model = len(set(cells) & set(models))
+              relevant_cells = set(cells) - skip
+              total = len(relevant_cells)
+              with_model = len(relevant_cells & set(models))
               model_pct = (with_model / total * 100) if total else 0
           except Exception as e:
               print(f"  model coverage error: {e}")
