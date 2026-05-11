@@ -54,9 +54,7 @@ def main() -> int:
             has_data_regression = True
             break
     if not has_data_regression:
-        result.warn(
-            "No test file uses data_regression for settings regression testing"
-        )
+        result.warn("No test file uses data_regression for settings regression testing")
 
     return result.report()
 

@@ -56,9 +56,7 @@ def check_tech_file(tech_path: Path, result: CheckResult) -> None:
             result.warn(f"{tech_path}: recommended definition '{name}' not found")
 
 
-def check_layers_consistency(
-    pkg_dir: Path, result: CheckResult
-) -> None:
+def check_layers_consistency(pkg_dir: Path, result: CheckResult) -> None:
     """Cross-check layers.yaml with LAYER class if both exist."""
     yaml_path = None
     for candidate in [pkg_dir / "layers.yaml", pkg_dir / "layers.yml"]:

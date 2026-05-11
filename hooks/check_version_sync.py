@@ -6,7 +6,13 @@ import re
 import sys
 from pathlib import Path
 
-from hooks._utils import CheckResult, find_package_dir, get_assigned_string, load_toml, parse_file
+from hooks._utils import (
+    CheckResult,
+    find_package_dir,
+    get_assigned_string,
+    load_toml,
+    parse_file,
+)
 
 
 def main() -> int:

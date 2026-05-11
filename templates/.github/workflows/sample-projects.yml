@@ -1,0 +1,33 @@
+name: Test Sample Projects
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['*--sample-projects/**']
+  pull_request:
+    paths: ['*--sample-projects/**']
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      project-dirs: ${{ steps.find.outputs.dirs }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - id: find
+        run: |
+          dirs=$(find . -maxdepth 3 -name 'pyproject.toml' \
+            -path '*--sample-projects/*' ! -path '*/.venv/*' \
+            | sed 's|^\./||; s|/pyproject.toml||' \
+            | sort \
+            | jq -Rcs '[split("\n")[] | select(. != "")]')
+          echo "dirs=$dirs" >> "$GITHUB_OUTPUT"
+
+  test-sample-projects:
+    needs: discover
+    if: needs.discover.outputs.project-dirs != '' && needs.discover.outputs.project-dirs != '[]'
+    uses: doplaydo/pdk-ci-workflow/.github/workflows/test-sample-projects.yml@main
+    with:
+      project-dirs: ${{ needs.discover.outputs.project-dirs }}
+    secrets:
+      GFP_API_KEY: ${{ secrets.GFP_API_KEY }}
