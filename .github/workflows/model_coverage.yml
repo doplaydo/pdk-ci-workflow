@@ -3,18 +3,18 @@ on:
   workflow_call:
     secrets:
       GFP_API_KEY:
-        required: true
+        required: false
 env:
   GFP_API_KEY: ${{ secrets.GFP_API_KEY }}
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-model_coverage
   cancel-in-progress: true
 jobs:
   model-coverage:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-      - uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           python-version: "3.12"
       - name: Install dependencies
@@ -37,15 +37,46 @@ jobs:
           pdk.activate()
           cells = pdk.cells
           models = getattr(pdk, "models", {}) or {}
-          total = len(cells)
-          with_model = len(set(cells) & set(models))
+          default_skip = set()
+          default_skip_prefixes = ("add_fiber", "die", "import_gds", "load", "mzi", "mzm", "pack", "pad", "rectangle", "ring", "spiral", "TEMPLATE", "via", "wire")
+          skip = default_skip | set(cfg.get("tool", {}).get("gdsfactoryplus", {}).get("pdk", {}).get("cells_no_model_expected", []))
+          default_skip_contains = ("bondpad", "frame", "metal")
+          skip |= {c for c in cells if c.startswith(default_skip_prefixes) or any(s in c for s in default_skip_contains)}
+          relevant_cells = set(cells) - skip
+          total = len(relevant_cells)
+          with_model = len(relevant_cells & set(models))
           pct = (with_model / total * 100) if total else 0
+
+          cells_with_model = sorted(relevant_cells & set(models))
+          cells_without_model = sorted(relevant_cells - set(models))
+          cells_no_model_expected = sorted(skip & set(cells))
 
           summary = os.environ.get("GITHUB_STEP_SUMMARY", "/dev/null")
           with open(summary, "a") as f:
               f.write(f"## Model Coverage\n\n")
               f.write(f"| Metric | Value |\n|--------|-------|\n")
-              f.write(f"| Cells | {total} |\n")
-              f.write(f"| Cells with model | {with_model} |\n")
-              f.write(f"| Coverage | {pct:.1f}% |\n")
+              f.write(f"| Cells (relevant) | {total} |\n")
+              f.write(f"| Cells with model | {len(cells_with_model)} |\n")
+              f.write(f"| Cells without model | {len(cells_without_model)} |\n")
+              f.write(f"| Cells no model expected | {len(cells_no_model_expected)} |\n")
+              f.write(f"| **Coverage** | **{pct:.1f}%** |\n\n")
+
+              if cells_with_model:
+                  f.write(f"<details><summary>Cells with model ({len(cells_with_model)})</summary>\n\n")
+                  for c in cells_with_model:
+                      f.write(f"- [x] `{c}`\n")
+                  f.write("\n</details>\n\n")
+
+              if cells_without_model:
+                  f.write(f"<details><summary>Cells without model ({len(cells_without_model)})</summary>\n\n")
+                  for c in cells_without_model:
+                      f.write(f"- [ ] `{c}`\n")
+                  f.write("\n</details>\n\n")
+
+              if cells_no_model_expected:
+                  f.write(f"<details><summary>Cells no model expected ({len(cells_no_model_expected)})</summary>\n\n")
+                  for c in cells_no_model_expected:
+                      f.write(f"- `{c}`\n")
+                  f.write("\n</details>\n\n")
+
           print(f"Model coverage: {with_model}/{total} ({pct:.1f}%)")

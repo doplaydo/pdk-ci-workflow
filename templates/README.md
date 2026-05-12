@@ -10,7 +10,7 @@ Minimal wrappers — each just calls the upstream reusable workflow with `secret
 |------|---------|
 | `.github/workflows/test_code.yml` | Pre-commit, pytest, GFP validation |
 | `.github/workflows/pages.yml` | Sphinx docs build + GitHub Pages |
-| `.github/workflows/claude-pr-review.yml` | AI code review via Claude |
+| `.github/workflows/claude-pr-review.yml` | AI code review via Claude — runs once on PR open/reopen; re-run on demand with `/claude-api review` comment |
 | `.github/workflows/release-drafter.yml` | Semantic versioning + Claude-curated release notes |
 | `.github/workflows/drc.yml` | Design Rule Check via GFP |
 | `.github/workflows/issue.yml` | Auto-label PDK issues |

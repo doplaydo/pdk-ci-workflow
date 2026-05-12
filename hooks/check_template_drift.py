@@ -33,6 +33,14 @@ TEMPLATES: list[str] = [
     ".github/workflows/update_badges.yml",
 ]
 
+# Files previously shipped as templates that are now fetched at runtime by
+# reusable workflows.  If they still exist in a PDK repo the hook deletes them
+# so stale copies don't shadow the centrally-maintained version.
+DEPRECATED_TEMPLATES: list[str] = [
+    "build_cell.py",
+    "sync_changelog.py",
+]
+
 
 def _diff(old: str, new: str, path: str) -> str:
     return "".join(
@@ -91,6 +99,12 @@ def main() -> int:
         local.write_text(src_text, encoding="utf-8")
         print(_diff(local_text, src_text, rel))
         result.error(f"rewrote {rel} from upstream template")
+
+    for rel in DEPRECATED_TEMPLATES:
+        local = Path(rel)
+        if local.exists():
+            local.unlink()
+            result.error(f"deleted deprecated template {rel} (now fetched by CI)")
 
     return result.report()
 

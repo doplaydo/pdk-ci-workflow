@@ -4,10 +4,10 @@ on:
   workflow_call:
     secrets:
       GFP_API_KEY:
-        required: true
+        required: false
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-test_code
   cancel-in-progress: true
 
 env:
@@ -23,7 +23,10 @@ jobs:
       run: |
         curl -fSL https://raw.githubusercontent.com/doplaydo/pdk-ci-workflow/main/templates/.pre-commit-config.yaml \
           -o .pre-commit-config.yaml
-    - uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
+    - name: Run pre-commit (no cache — rev uses mutable main branch)
+      run: |
+        pip install pre-commit
+        pre-commit run --all-files
   test_code:
     runs-on: ubuntu-latest
     steps:
@@ -33,7 +36,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install uv
-        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
       - name: Install dependencies
         run: |
           make install
@@ -41,12 +44,12 @@ jobs:
         run: make test
       - name: Upload difftest artifacts
         if: failure()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: difftest-report-test_code
           path: test_diffs/
           if-no-files-found: ignore
-          retention-days: 14
+          retention-days: 3
   test_gfp:
     runs-on: ubuntu-latest
     steps:
@@ -56,7 +59,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install uv
-        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
       - name: Install dependencies
         run: |
           make install
@@ -64,9 +67,9 @@ jobs:
         run: uv run gfp test
       - name: Upload difftest artifacts
         if: failure()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: difftest-report-test_gfp
           path: test_diffs/
           if-no-files-found: ignore
-          retention-days: 14
+          retention-days: 3
