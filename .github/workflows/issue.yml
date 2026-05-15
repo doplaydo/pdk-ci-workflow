@@ -31,3 +31,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
+      - name: Add to project
+        run: |
+          gh project item-add 18 --owner doplaydo --url "${{ github.event.issue.html_url }}"
+        env:
+          GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}

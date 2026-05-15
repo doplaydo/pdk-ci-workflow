@@ -21,31 +21,30 @@ jobs:
         run: make install
       - name: Detect package name
         id: pkg
+        shell: uv run python {0}
         run: |
-          pkg=$(uv run python -c "
-          import tomllib
-          with open('pyproject.toml', 'rb') as f:
+          import tomllib, os
+          with open("pyproject.toml", "rb") as f:
               cfg = tomllib.load(f)
-          module = cfg.get('tool', {}).get('gdsfactoryplus', {}).get('pdk', {}).get('name', '')
-          print(module.split('.')[0] if module else '')
-          ")
-          echo "name=$pkg" >> "$GITHUB_OUTPUT"
+          module = cfg.get("tool", {}).get("gdsfactoryplus", {}).get("pdk", {}).get("name", "")
+          pkg = module.split(".")[0] if module else ""
+          with open(os.environ.get("GITHUB_OUTPUT", "/dev/null"), "a") as f:
+              f.write(f"name={pkg}\n")
       - name: Run tests with coverage
         env:
           PYTEST_ADDOPTS: "--cov=${{ steps.pkg.outputs.name }} --cov-report=term-missing --cov-report=xml --cov-append -q"
         run: make test
       - name: Write summary
         if: always()
+        shell: uv run python {0}
         run: |
-          uv run python -c "
           import xml.etree.ElementTree as ET, os
           try:
-              tree = ET.parse('coverage.xml')
-              rate = float(tree.getroot().attrib.get('line-rate', 0)) * 100
-              summary = os.environ.get('GITHUB_STEP_SUMMARY', '/dev/null')
-              with open(summary, 'a') as f:
-                  f.write(f'## Test Coverage\n\nLine coverage: {rate:.1f}%\n')
-              print(f'Coverage: {rate:.1f}%')
+              tree = ET.parse("coverage.xml")
+              rate = float(tree.getroot().attrib.get("line-rate", 0)) * 100
+              summary = os.environ.get("GITHUB_STEP_SUMMARY", "/dev/null")
+              with open(summary, "a") as f:
+                  f.write(f"## Test Coverage\n\nLine coverage: {rate:.1f}%\n")
+              print(f"Coverage: {rate:.1f}%")
           except Exception as e:
-              print(f'Could not parse coverage: {e}')
-          "
+              print(f"Could not parse coverage: {e}")
