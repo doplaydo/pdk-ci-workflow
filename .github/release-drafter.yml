@@ -68,4 +68,3 @@ autolabeler:
       - '/add-.+/'
     title:
       - '/^add\s/i'
-      

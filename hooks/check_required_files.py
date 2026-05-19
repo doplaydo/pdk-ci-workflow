@@ -56,8 +56,7 @@ def main() -> int:
     # test_code.yml or test.yml — at least one must exist
     if not any(Path(c).exists() for c in TEST_WORKFLOW_CANDIDATES):
         result.error(
-            "Required workflow missing: .github/workflows/test_code.yml "
-            "(or test.yml)"
+            "Required workflow missing: .github/workflows/test_code.yml (or test.yml)"
         )
 
     for f in RECOMMENDED_FILES:

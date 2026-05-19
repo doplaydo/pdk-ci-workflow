@@ -121,13 +121,9 @@ def check_ruff(data: dict[str, Any], result: CheckResult) -> None:
 
     # select/ignore must be under [tool.ruff.lint], NOT [tool.ruff]
     if "select" in ruff:
-        result.error(
-            "[tool.ruff].select should be under [tool.ruff.lint].select"
-        )
+        result.error("[tool.ruff].select should be under [tool.ruff.lint].select")
     if "ignore" in ruff:
-        result.error(
-            "[tool.ruff].ignore should be under [tool.ruff.lint].ignore"
-        )
+        result.error("[tool.ruff].ignore should be under [tool.ruff.lint].ignore")
 
     lint = ruff.get("lint", {})
 
@@ -136,18 +132,14 @@ def check_ruff(data: dict[str, Any], result: CheckResult) -> None:
     required_select = {"B", "C", "D", "E", "F", "I", "T10", "UP", "W"}
     missing_select = required_select - set(select)
     if missing_select:
-        result.warn(
-            f"[tool.ruff.lint].select missing: {sorted(missing_select)}"
-        )
+        result.warn(f"[tool.ruff.lint].select missing: {sorted(missing_select)}")
 
     # Minimum ignore values
     ignore = lint.get("ignore", [])
     required_ignore = {"E501", "B008", "C901", "B905", "C408"}
     missing_ignore = required_ignore - set(ignore)
     if missing_ignore:
-        result.warn(
-            f"[tool.ruff.lint].ignore missing: {sorted(missing_ignore)}"
-        )
+        result.warn(f"[tool.ruff.lint].ignore missing: {sorted(missing_ignore)}")
 
     # pydocstyle convention under [tool.ruff.lint.pydocstyle]
     pydocstyle = lint.get("pydocstyle", {})
@@ -161,8 +153,7 @@ def check_ruff(data: dict[str, Any], result: CheckResult) -> None:
             )
         else:
             result.warn(
-                '[tool.ruff.lint.pydocstyle].convention not set '
-                '(recommend "google")'
+                '[tool.ruff.lint.pydocstyle].convention not set (recommend "google")'
             )
 
 
@@ -208,9 +199,7 @@ def check_codespell(data: dict[str, Any], result: CheckResult) -> None:
     required_words = {"te", "ba", "fpr", "ro", "nd", "donot", "schem"}
     missing = required_words - words
     if missing:
-        result.warn(
-            f"[tool.codespell].ignore-words-list missing: {sorted(missing)}"
-        )
+        result.warn(f"[tool.codespell].ignore-words-list missing: {sorted(missing)}")
 
 
 def check_pytest(data: dict[str, Any], result: CheckResult) -> None:
@@ -223,7 +212,9 @@ def check_pytest(data: dict[str, Any], result: CheckResult) -> None:
 
     # Fallback to tool_pytest if "ini_options" isn't present
     pytest_cfg = tool_pytest.get("ini_options", tool_pytest)
-    name = "[tool.pytest.ini_options]" if "ini_options" in tool_pytest else "[tool.pytest]"
+    name = (
+        "[tool.pytest.ini_options]" if "ini_options" in tool_pytest else "[tool.pytest]"
+    )
 
     if "testpaths" not in pytest_cfg:
         result.error(f"{name}.testpaths missing")
@@ -249,9 +240,7 @@ def check_package_data(data: dict[str, Any], result: CheckResult) -> None:
     required_exts = ["*.csv", "*.yaml", "*.yml", "*.gds", "*.lyp", "*.oas", "*.lyt"]
     for ext in required_exts:
         if ext not in patterns:
-            result.warn(
-                f"[tool.setuptools.package-data].* missing {ext}"
-            )
+            result.warn(f"[tool.setuptools.package-data].* missing {ext}")
 
 
 def check_tbump(data: dict[str, Any], result: CheckResult) -> None:
@@ -270,8 +259,8 @@ def check_tbump(data: dict[str, Any], result: CheckResult) -> None:
         proj_version = data.get("project", {}).get("version")
         if proj_version and version["current"] != proj_version:
             result.error(
-                f"[tool.tbump.version].current = \"{version['current']}\" "
-                f"does not match [project].version = \"{proj_version}\""
+                f'[tool.tbump.version].current = "{version["current"]}" '
+                f'does not match [project].version = "{proj_version}"'
             )
 
     # file entries
@@ -287,9 +276,7 @@ def check_tbump(data: dict[str, Any], result: CheckResult) -> None:
         # Check for __init__.py tracking
         has_init = any("__init__.py" in (s or "") for s in srcs)
         if not has_init:
-            result.error(
-                "[[tool.tbump.file]] missing src for <pkg>/__init__.py"
-            )
+            result.error("[[tool.tbump.file]] missing src for <pkg>/__init__.py")
 
     # git section
     git = tbump.get("git", {})
@@ -324,11 +311,10 @@ def check_towncrier(data: dict[str, Any], result: CheckResult) -> None:
     for key, expected_val in expected.items():
         actual = tc.get(key)
         if actual is None:
-            result.warn(f"[tool.towncrier].{key} missing (expected \"{expected_val}\")")
+            result.warn(f'[tool.towncrier].{key} missing (expected "{expected_val}")')
         elif actual != expected_val:
             result.warn(
-                f"[tool.towncrier].{key} = \"{actual}\" "
-                f"(expected \"{expected_val}\")"
+                f'[tool.towncrier].{key} = "{actual}" (expected "{expected_val}")'
             )
 
 

@@ -1,0 +1,169 @@
+name: Test Sample Projects
+
+on:
+  workflow_call:
+    inputs:
+      project-dirs:
+        description: 'JSON array of sample project paths relative to repo root'
+        required: true
+        type: string
+    secrets:
+      GFP_API_KEY:
+        required: false
+
+env:
+  GFP_API_KEY: ${{ secrets.GFP_API_KEY }}
+
+jobs:
+  test:
+    name: Test ${{ matrix.project-dir }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project-dir: ${{ fromJSON(inputs.project-dirs) }}
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-test-${{ matrix.project-dir }}
+      cancel-in-progress: true
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ matrix.project-dir }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          python-version: "3.12"
+      - name: Configure gfp
+        run: uv run --no-project --with gdsfactoryplus gfp configure --api-key ${{ secrets.GFP_API_KEY }} --uv
+      - name: Install dependencies
+        run: uv sync --all-extras
+      - name: Test
+        run: uv run gfp test
+
+  notebooks:
+    name: Notebooks ${{ matrix.project-dir }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project-dir: ${{ fromJSON(inputs.project-dirs) }}
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-notebooks-${{ matrix.project-dir }}
+      cancel-in-progress: true
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ matrix.project-dir }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          python-version: "3.12"
+      - name: Configure gfp
+        run: uv run --no-project --with gdsfactoryplus gfp configure --api-key ${{ secrets.GFP_API_KEY }} --uv
+      - name: Install dependencies
+        run: uv sync --all-extras
+      - name: Install notebook tools
+        run: uv pip install nbconvert ipykernel
+      - name: Execute notebooks
+        env:
+          RAY_ENABLE_UV_RUN_RUNTIME_ENV: "0"
+        run: |
+          shopt -s globstar nullglob
+          SKIP_PATTERNS="hfss_|hfss-|matlab_|matlab-"
+          notebooks=(**/*.ipynb)
+          if [ ${#notebooks[@]} -eq 0 ]; then
+            echo "No notebooks found"
+            exit 0
+          fi
+          echo "Found ${#notebooks[@]} notebook(s)"
+          for notebook in "${notebooks[@]}"; do
+            if echo "$notebook" | grep -qE "$SKIP_PATTERNS"; then
+              echo "Skipping $notebook (proprietary tools)"
+              continue
+            fi
+            echo "Executing $notebook"
+            uv run jupyter nbconvert --to notebook --execute "$notebook" \
+              --output-dir /tmp --ExecutePreprocessor.timeout=600
+          done
+
+  drc:
+    name: DRC ${{ matrix.project-dir }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project-dir: ${{ fromJSON(inputs.project-dirs) }}
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-drc-${{ matrix.project-dir }}
+      cancel-in-progress: true
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ matrix.project-dir }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          python-version: "3.12"
+      - name: Configure gfp
+        run: uv run --no-project --with gdsfactoryplus gfp configure --api-key ${{ secrets.GFP_API_KEY }} --uv
+      - name: Install dependencies
+        run: uv sync --all-extras
+      - name: Download build_cell script
+        working-directory: ${{ github.workspace }}
+        run: curl -fsSL https://raw.githubusercontent.com/doplaydo/pdk-ci-workflow/main/scripts/build_cell.py -o build_cell.py
+      - name: Build sample_drc_errors cell
+        run: uv run python "$GITHUB_WORKSPACE/build_cell.py" sample_drc_errors
+      - name: Run DRC
+        continue-on-error: true
+        run: |
+          mkdir -p build/lyrdb
+          max_attempts=3
+          attempt=1
+          drc_exit=1
+          while [ "$attempt" -le "$max_attempts" ]; do
+            echo "--- DRC attempt ${attempt}/${max_attempts} ---"
+            log_file="build/drc_attempt_${attempt}.log"
+            set +e
+            PYTHONUNBUFFERED=1 uv run gfp check drc build/gds/sample_drc_errors.gds \
+              --outpath build/lyrdb/sample_drc_errors.lyrdb --verbose >"$log_file" 2>&1
+            drc_exit=$?
+            set -e
+            cat "$log_file"
+            echo "DRC exit code (attempt ${attempt}): ${drc_exit}"
+            if [ "$drc_exit" -eq 0 ] && [ -f build/lyrdb/sample_drc_errors.lyrdb ]; then
+              break
+            fi
+            if [ "$attempt" -lt "$max_attempts" ]; then
+              backoff=$((20 * (2 ** (attempt - 1))))
+              echo "Retrying after ${backoff}s..."
+              sleep "$backoff"
+            fi
+            attempt=$((attempt + 1))
+          done
+          echo "Final DRC exit code: ${drc_exit}"
+      - id: slug
+        if: always()
+        run: echo "name=drc-$(echo '${{ matrix.project-dir }}' | tr '/' '-')" >> "$GITHUB_OUTPUT"
+      - name: Upload DRC report
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: ${{ steps.slug.outputs.name }}
+          path: ${{ matrix.project-dir }}/build/lyrdb/
+          retention-days: 3
+      - name: Verify DRC errors found
+        if: always()
+        run: |
+          if [ ! -f build/lyrdb/sample_drc_errors.lyrdb ]; then
+            echo "::error::DRC output not found — gfp check drc likely failed"
+            exit 1
+          fi
+          errors=$(grep -c '<item>' build/lyrdb/sample_drc_errors.lyrdb) || errors=0
+          echo "DRC errors: $errors"
+          if [ "$errors" = "0" ]; then
+            echo "::error::Expected DRC errors but found none"
+            exit 1
+          fi

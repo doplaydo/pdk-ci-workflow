@@ -27,9 +27,8 @@ def _find_get_cells_vars(tree: ast.Module) -> set[str]:
     for node in ast.iter_child_nodes(tree):
         if isinstance(node, ast.Assign) and isinstance(node.value, ast.Call):
             func = node.value.func
-            is_get_cells = (
-                (isinstance(func, ast.Name) and func.id == "get_cells")
-                or (isinstance(func, ast.Attribute) and func.attr == "get_cells")
+            is_get_cells = (isinstance(func, ast.Name) and func.id == "get_cells") or (
+                isinstance(func, ast.Attribute) and func.attr == "get_cells"
             )
             if is_get_cells:
                 for target in node.targets:

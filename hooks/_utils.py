@@ -39,7 +39,16 @@ def load_yaml(path: str) -> dict[str, Any] | None:
 
 # ── Package discovery ────────────────────────────────────────────────
 
-_SKIP_DIRS = {"tests", "docs", "notebooks", ".git", ".github", "actions", "hooks", "scripts"}
+_SKIP_DIRS = {
+    "tests",
+    "docs",
+    "notebooks",
+    ".git",
+    ".github",
+    "actions",
+    "hooks",
+    "scripts",
+}
 
 
 def find_package_dir() -> Path | None:
@@ -56,10 +65,7 @@ def find_package_dir() -> Path | None:
 
     # Try [tool.setuptools.packages.find].include
     find_cfg = (
-        data.get("tool", {})
-        .get("setuptools", {})
-        .get("packages", {})
-        .get("find", {})
+        data.get("tool", {}).get("setuptools", {}).get("packages", {}).get("find", {})
     )
     where = find_cfg.get("where", ["."])
     base = Path(where[0]) if where else Path(".")
@@ -182,7 +188,7 @@ class CheckResult:
         if self._warnings:
             if not self._errors:
                 print()
-            print(f"  Warnings:")
+            print("  Warnings:")
             for w in self._warnings:
                 print(f"  \u26a0\ufe0f  {w}")
 
@@ -296,9 +302,7 @@ def has_decorator(func_def: ast.FunctionDef, name: str) -> bool:
     return False
 
 
-def is_gf_cell_decorator(
-    decorator: ast.expr, aliases: dict[str, str]
-) -> bool:
+def is_gf_cell_decorator(decorator: ast.expr, aliases: dict[str, str]) -> bool:
     """Check if a decorator node represents @gf.cell (or equivalent)."""
     # Unwrap Call: @gf.cell() or @gf.cell(autoname=True)
     node = decorator.func if isinstance(decorator, ast.Call) else decorator
@@ -319,9 +323,7 @@ def is_gf_cell_decorator(
     return False
 
 
-def returns_component(
-    func: ast.FunctionDef, aliases: dict[str, str]
-) -> bool:
+def returns_component(func: ast.FunctionDef, aliases: dict[str, str]) -> bool:
     """Check if function return annotation indicates gf.Component."""
     ann = func.returns
     if ann is None:

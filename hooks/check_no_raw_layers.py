@@ -111,8 +111,7 @@ class RawLayerTupleFinder(ast.NodeVisitor):
         if len(node.elts) != 2:
             return False
         return all(
-            isinstance(e, ast.Constant) and isinstance(e.value, int)
-            for e in node.elts
+            isinstance(e, ast.Constant) and isinstance(e.value, int) for e in node.elts
         )
 
 

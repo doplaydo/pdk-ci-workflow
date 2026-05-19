@@ -8,7 +8,6 @@ from pathlib import Path
 
 from hooks._utils import (
     CheckResult,
-    find_cell_files,
     find_package_dir,
     get_docstring_from_node,
     get_import_aliases,
@@ -50,9 +49,7 @@ def check_cell_file(
                 )
             else:
                 # Only require Args section if function has parameters
-                params = [
-                    a.arg for a in node.args.args if a.arg != "self"
-                ]
+                params = [a.arg for a in node.args.args if a.arg != "self"]
                 if params and not has_google_args_section(docstring):
                     result.error(
                         f"{path}:{node.lineno} @gf.cell function '{node.name}' "
@@ -112,9 +109,7 @@ def main() -> int:
 
         if cells_dir.is_dir():
             cell_files = [
-                p
-                for p in sorted(cells_dir.glob("*.py"))
-                if p.name != "__init__.py"
+                p for p in sorted(cells_dir.glob("*.py")) if p.name != "__init__.py"
             ]
 
             for cell_file in cell_files:

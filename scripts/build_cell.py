@@ -3,11 +3,12 @@
 When cell_name is "all_cells", builds every PDK-owned cell that can be
 instantiated with default arguments and packs them into a single GDS.
 Cells from installed packages (site-packages / .venv), cells located
-under a ``samples/`` directory (demo/tapeout cells that re-use BB cells
+under a ``samples/`` directory (demo/tapeout cells that reuse BB cells
 and would cause cellname collisions), and cells that require positional
 arguments are skipped automatically.
 """
 
+import importlib
 import inspect
 import sys
 from pathlib import Path
@@ -32,7 +33,7 @@ if cell_name == "all_cells":
         if ".venv" in src or "site-packages" in src:
             continue
 
-        # Skip demo/tapeout cells under a samples/ directory: they re-use BB
+        # Skip demo/tapeout cells under a samples/ directory: they reuse BB
         # cells already registered as top-level PDK cells, which would cause
         # cellname collisions when packed together.
         if "/samples/" in src or src.endswith("/samples"):
@@ -57,5 +58,32 @@ if cell_name == "all_cells":
             print(f"Error instantiating cell {name}: {e}")
     c.write_gds(f"build/gds/{cell_name}.gds")
 else:
-    c = pdk.cells[cell_name]()
+    candidate_names = [cell_name, f"_{cell_name}"]
+    cell_func = None
+
+    for candidate_name in candidate_names:
+        cell_func = pdk.cells.get(candidate_name)
+        if cell_func:
+            break
+
+    if cell_func is None:
+        # Cell not auto-discovered (e.g. nested in a samples/ subpackage).
+        for py_file in sorted(Path(".").rglob(f"{cell_name}.py")):
+            module_path = ".".join(py_file.with_suffix("").parts)
+            try:
+                mod = importlib.import_module(module_path)
+            except ImportError:
+                continue
+            for candidate_name in candidate_names:
+                cell_func = getattr(mod, candidate_name, None)
+                if cell_func:
+                    break
+            if cell_func:
+                break
+
+    if cell_func is None:
+        print(f"Error: cell '{cell_name}' not found", file=sys.stderr)
+        sys.exit(1)
+
+    c = cell_func()
     c.write_gds(f"build/gds/{cell_name}.gds")
